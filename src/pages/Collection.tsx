@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
-import { getCollectionProducts, type Product, type Collection as CollectionType } from '../lib/shopify';
+import { getCollectionProducts, type Product, type Collection as CollectionType, type CollectionProductsResult } from '../lib/shopify';
 import ProductCard from '../components/ProductCard';
 
 export default function Collection() {
@@ -20,7 +20,7 @@ export default function Collection() {
     setProducts([]);
 
     getCollectionProducts(handle, 24)
-      .then((data) => {
+      .then((data: CollectionProductsResult) => {
         setCollection(data.collection);
         setProducts(data.products);
         setPageInfo(data.pageInfo);

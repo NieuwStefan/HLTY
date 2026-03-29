@@ -227,9 +227,14 @@ const CART_FRAGMENT = `
 
 import { get as cacheGet, set as cacheSet, TTL } from './cache';
 
-export async function getProducts(first = 24, after?: string) {
+export interface ProductListResult {
+  products: Product[];
+  pageInfo: { hasNextPage: boolean; endCursor: string };
+}
+
+export async function getProducts(first = 24, after?: string): Promise<ProductListResult> {
   const key = `products:${first}:${after ?? ''}`;
-  const cached = cacheGet<ReturnType<typeof getProducts> extends Promise<infer R> ? R : never>(key);
+  const cached = cacheGet<ProductListResult>(key);
   if (cached) return cached;
 
   const data = await shopifyFetch<any>(
@@ -321,9 +326,9 @@ export async function getCatalogProducts(first = 150) {
   return result;
 }
 
-export async function searchProducts(query: string, first = 24, sortKey: 'RELEVANCE' | 'BEST_SELLING' = 'RELEVANCE') {
+export async function searchProducts(query: string, first = 24, sortKey: 'RELEVANCE' | 'BEST_SELLING' = 'RELEVANCE'): Promise<ProductListResult> {
   const key = `search:${query}:${first}:${sortKey}`;
-  const cached = cacheGet<ReturnType<typeof searchProducts> extends Promise<infer R> ? R : never>(key);
+  const cached = cacheGet<ProductListResult>(key);
   if (cached) return cached;
 
   const data = await shopifyFetch<any>(
@@ -394,9 +399,15 @@ export async function getCollections(first = 50): Promise<Collection[]> {
   return result;
 }
 
-export async function getCollectionProducts(handle: string, first = 24, after?: string) {
+export interface CollectionProductsResult {
+  collection: Collection;
+  products: Product[];
+  pageInfo: { hasNextPage: boolean; endCursor: string };
+}
+
+export async function getCollectionProducts(handle: string, first = 24, after?: string): Promise<CollectionProductsResult> {
   const key = `collection:${handle}:${first}:${after ?? ''}`;
-  const cached = cacheGet<ReturnType<typeof getCollectionProducts> extends Promise<infer R> ? R : never>(key);
+  const cached = cacheGet<CollectionProductsResult>(key);
   if (cached) return cached;
 
   const data = await shopifyFetch<any>(

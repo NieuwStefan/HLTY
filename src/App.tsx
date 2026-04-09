@@ -33,7 +33,7 @@ export default function App() {
           <Header />
           <CartDrawer />
 
-          <main className="flex-1 pb-12" style={{ paddingTop: 'var(--header-h, 96px)' }}>
+          <main className="flex-1 pb-12 pt-8" style={{ paddingTop: 'calc(var(--header-h, 96px) + 2rem)' }}>
             <AnimatePresence mode="wait">
               <motion.div key={location.pathname} {...pageTransition}>
                 <Routes location={location}>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search as SearchIcon } from 'lucide-react';
-import { searchProducts, type Product, type ProductListResult } from '../lib/shopify';
+import { searchProducts, sortByBrandRelevance, type Product, type ProductListResult } from '../lib/shopify';
 import ProductCard from '../components/ProductCard';
 
 export default function Search() {
@@ -19,7 +19,7 @@ export default function Search() {
 
     setLoading(true);
     searchProducts(query, 48)
-      .then((data: ProductListResult) => setProducts(data.products))
+      .then((data: ProductListResult) => setProducts(sortByBrandRelevance(data.products)))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [query]);

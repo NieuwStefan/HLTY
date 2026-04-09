@@ -83,6 +83,21 @@ export interface Menu {
   items: MenuItem[];
 }
 
+// ---------- Helpers ----------
+
+/**
+ * Sort products by brand relevance: brands with more products in the
+ * current context (collection / search result) appear first.
+ * Within the same brand the original order (e.g. best-selling) is preserved.
+ */
+export function sortByBrandRelevance(products: Product[]): Product[] {
+  const brandCount = new Map<string, number>();
+  for (const p of products) {
+    if (p.vendor) brandCount.set(p.vendor, (brandCount.get(p.vendor) ?? 0) + 1);
+  }
+  return [...products].sort((a, b) => (brandCount.get(b.vendor) ?? 0) - (brandCount.get(a.vendor) ?? 0));
+}
+
 // ---------- GraphQL Client ----------
 
 async function shopifyFetch<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
@@ -169,6 +184,7 @@ const PRODUCT_CARD_FRAGMENT = `
     handle
     productType
     vendor
+    tags
     images(first: 1) {
       edges { node { url altText } }
     }

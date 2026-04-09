@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
-import { getCollectionProducts, type Product, type Collection as CollectionType, type CollectionProductsResult } from '../lib/shopify';
+import { getCollectionProducts, sortByBrandRelevance, type Product, type Collection as CollectionType, type CollectionProductsResult } from '../lib/shopify';
 import ProductCard from '../components/ProductCard';
+import FilterSidebar from '../components/FilterSidebar';
 
 export default function Collection() {
   const { handle } = useParams<{ handle: string }>();
@@ -13,16 +14,20 @@ export default function Collection() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [pageInfo, setPageInfo] = useState<{ hasNextPage: boolean; endCursor: string } | null>(null);
   const [sortBy, setSortBy] = useState('BEST_SELLING');
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
 
   useEffect(() => {
     if (!handle) return;
     setLoading(true);
     setProducts([]);
+    setSelectedBrands([]);
+    setSelectedIngredients([]);
 
     getCollectionProducts(handle, 24)
       .then((data: CollectionProductsResult) => {
         setCollection(data.collection);
-        setProducts(data.products);
+        setProducts(sortByBrandRelevance(data.products));
         setPageInfo(data.pageInfo);
       })
       .catch(console.error)
@@ -34,11 +39,32 @@ export default function Collection() {
     setLoadingMore(true);
     try {
       const data = await getCollectionProducts(handle, 24, pageInfo.endCursor);
-      setProducts((prev) => [...prev, ...data.products]);
+      setProducts((prev) => sortByBrandRelevance([...prev, ...data.products]));
       setPageInfo(data.pageInfo);
     } finally {
       setLoadingMore(false);
     }
+  };
+
+  const filteredProducts = useMemo(() => {
+    let result = products;
+
+    if (selectedBrands.length > 0) {
+      result = result.filter((p) => selectedBrands.includes(p.vendor));
+    }
+
+    if (selectedIngredients.length > 0) {
+      result = result.filter((p) =>
+        selectedIngredients.some((ingredient) => p.tags.includes(`INGR-${ingredient}`))
+      );
+    }
+
+    return result;
+  }, [products, selectedBrands, selectedIngredients]);
+
+  const clearFilters = () => {
+    setSelectedBrands([]);
+    setSelectedIngredients([]);
   };
 
   if (loading) {
@@ -99,45 +125,86 @@ export default function Collection() {
 
         <div className="mt-6 flex items-center justify-between">
           <p className="text-sm text-[var(--color-muted)]">
-            {products.length} product{products.length !== 1 ? 'en' : ''}
+            {filteredProducts.length} product{filteredProducts.length !== 1 ? 'en' : ''}
+            {filteredProducts.length !== products.length && (
+              <span className="text-[var(--color-muted)]"> van {products.length}</span>
+            )}
           </p>
         </div>
       </motion.div>
 
-      {/* Products */}
-      {products.length === 0 ? (
-        <div className="card p-12 text-center">
-          <p className="text-lg font-semibold text-[var(--color-navy)]">Geen producten gevonden</p>
-          <p className="text-[var(--color-muted)] mt-2">Er zijn nog geen producten in deze collectie.</p>
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {products.map((product, i) => (
-              <ProductCard key={product.id} product={product} index={i} />
-            ))}
-          </div>
+      {/* Mobile filter */}
+      <div className="lg:hidden">
+        <FilterSidebar
+          products={products}
+          selectedBrands={selectedBrands}
+          selectedIngredients={selectedIngredients}
+          onBrandsChange={setSelectedBrands}
+          onIngredientsChange={setSelectedIngredients}
+          onClear={clearFilters}
+        />
+      </div>
 
-          {pageInfo?.hasNextPage && (
-            <div className="mt-12 text-center">
-              <button
-                onClick={loadMore}
-                disabled={loadingMore}
-                className="btn-secondary px-8 py-3 text-sm gap-2"
-              >
-                {loadingMore ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Laden...
-                  </>
-                ) : (
-                  'Meer producten laden'
-                )}
-              </button>
+      {/* Content with sidebar */}
+      <div className="flex gap-8">
+        {/* Desktop sidebar */}
+        <div className="hidden lg:block">
+          <FilterSidebar
+            products={products}
+            selectedBrands={selectedBrands}
+            selectedIngredients={selectedIngredients}
+            onBrandsChange={setSelectedBrands}
+            onIngredientsChange={setSelectedIngredients}
+            onClear={clearFilters}
+          />
+        </div>
+
+        {/* Products */}
+        <div className="flex-1 min-w-0">
+          {filteredProducts.length === 0 ? (
+            <div className="card p-12 text-center">
+              <p className="text-lg font-semibold text-[var(--color-navy)]">Geen producten gevonden</p>
+              <p className="text-[var(--color-muted)] mt-2">
+                {products.length > 0
+                  ? 'Probeer andere filters of wis je selectie.'
+                  : 'Er zijn nog geen producten in deze collectie.'}
+              </p>
+              {products.length > 0 && (
+                <button onClick={clearFilters} className="btn-primary mt-4 px-6 py-2 text-sm">
+                  Wis filters
+                </button>
+              )}
             </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {filteredProducts.map((product, i) => (
+                  <ProductCard key={product.id} product={product} index={i} />
+                ))}
+              </div>
+
+              {pageInfo?.hasNextPage && (
+                <div className="mt-12 text-center">
+                  <button
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                    className="btn-secondary px-8 py-3 text-sm gap-2"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Laden...
+                      </>
+                    ) : (
+                      'Meer producten laden'
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
           )}
-        </>
-      )}
+        </div>
+      </div>
     </div>
   );
 }

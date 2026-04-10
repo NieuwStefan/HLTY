@@ -57,7 +57,7 @@ const CORE_VALUES = [
 
 export default function Home() {
   return (
-    <div className="space-y-20">
+    <div className="space-y-16">
       {/* Hero */}
       <section className="relative">
         <div className="mx-auto max-w-[1400px] px-4">
@@ -123,7 +123,7 @@ export default function Home() {
       </section>
 
       {/* Trust Stats Bar */}
-      <section className="mx-auto max-w-[1400px] px-4 -mt-8">
+      <section className="mx-auto max-w-[1400px] px-4">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {TRUST_STATS.map((stat, i) => (
             <motion.div

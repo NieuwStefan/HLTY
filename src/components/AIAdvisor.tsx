@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, SendHorizontal, Loader2, ShoppingCart, ChevronLeft, AlertCircle, MessageCircle, Target, Zap, CheckCircle2 } from 'lucide-react';
-import OpenAI from 'openai';
 import { searchProducts, type Product } from '../lib/shopify';
 import { useCart } from '../context/CartContext';
 
@@ -57,29 +56,26 @@ Elke zin moet duidelijk verschillend zijn — geen herhaling van dezelfde tekst!
 Antwoord ALLEEN met JSON:
 {"pitches":[{"handle":"product-handle","text":"Zin over dit specifieke product"}]}`;
 
-// ---------- OpenAI client ----------
-
-let openaiClient: OpenAI | null = null;
-function getClient(): OpenAI {
-  if (!openaiClient) {
-    openaiClient = new OpenAI({
-      apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-      dangerouslyAllowBrowser: true,
-    });
-  }
-  return openaiClient;
-}
+// ---------- GPT client (via Vercel serverless proxy) ----------
 
 async function callGPT(systemPrompt: string, history: ChatMessage[], maxTokens = 256): Promise<string> {
-  const completion = await getClient().chat.completions.create({
-    model: 'gpt-4o-mini',
-    max_tokens: maxTokens,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      ...history.map((m) => ({ role: m.role, content: m.content })),
-    ],
+  const res = await fetch('/api/openai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      systemPrompt,
+      messages: history.map((m) => ({ role: m.role, content: m.content })),
+      maxTokens,
+    }),
   });
-  return completion.choices[0]?.message?.content ?? '';
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`AI-aanvraag mislukt (${res.status}): ${errText.slice(0, 200)}`);
+  }
+
+  const data = (await res.json()) as { content?: string };
+  return data.content ?? '';
 }
 
 function parseJSON<T>(text: string): T {

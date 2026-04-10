@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "hlty",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": ["-c", "PATH=/usr/local/bin:/opt/homebrew/bin:$PATH npm run dev"],
+      "port": 5173
+    }
+  ]
+}

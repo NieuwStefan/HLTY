@@ -7,15 +7,20 @@ import { useCart } from '../context/CartContext';
 
 // ---------- Config ----------
 
-const BRANDS = [
-  'HLTY', 'Orthica', 'Royal Green', 'Arctic Blue',
-  'Activo', 'Mattisson', 'ESN', 'The Green Athlete',
-  'Geen voorkeur',
+const DIETARY_PREFERENCES = [
+  'Vegan',
+  'Vegetarisch',
+  'Glutenvrij',
+  'Lactosevrij',
+  'Suikervrij',
+  'Geen specifieke wensen',
 ];
+
+const NO_PREFERENCE = 'Geen specifieke wensen';
 
 // ---------- Types ----------
 
-type Phase = 'idle' | 'loading' | 'question' | 'brands' | 'results';
+type Phase = 'idle' | 'loading' | 'question' | 'diets' | 'results';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -36,14 +41,21 @@ Gebruik gewone begrijpelijke taal, geen vakjargon.
 De vraag moet open zijn — geen multiple choice, de klant typt zelf een antwoord.
 Antwoord ALLEEN met JSON: {"text":"jouw open vraag hier"}`;
 
-const PROMPT_RESULTS = `Je bent gezondheidsadviseur voor HLTY.shop.
-Op basis van het gesprek geef je zoektermen en producttoelichtingen.
-Geef 2-3 zoektermen (specifieke ingrediënten zoals "magnesium", "vitamine B", "kurkuma", "omega-3").
-Per zoekterm schrijf je 1 korte zin waarom dit de klant kan ondersteunen.
-Als er geen merkvoorkeur is, kies dan de meest effectieve/populaire optie ongeacht merk.
-Schrijf ook een korte persoonlijke samenvatting.
+const PROMPT_PLAN = `Je bent gezondheidsadviseur voor HLTY.shop.
+Op basis van het gesprek bepaal je een zoekstrategie.
+Geef 2-3 Nederlandse zoektermen (specifieke ingrediënten zoals "magnesium", "vitamine B", "kurkuma", "omega-3").
+Houd rekening met eventuele dieetwensen/allergieën van de klant.
+Schrijf ook een korte persoonlijke samenvatting (2 zinnen) voor de klant.
 Antwoord ALLEEN met JSON:
-{"queries":["term1","term2"],"reasons":["Reden1","Reden2"],"summary":"Samenvatting voor de klant"}`;
+{"queries":["term1","term2"],"summary":"Samenvatting voor de klant"}`;
+
+const PROMPT_PITCH = `Je bent gezondheidsadviseur voor HLTY.shop.
+Je krijgt een lijst producten en de situatie van de klant.
+Schrijf per product ÉÉN korte, persoonlijke zin (maximaal 20 woorden) waarom juist DIT specifieke product past bij de klant.
+Gebruik in elke zin de productnaam, het actieve ingrediënt of een uniek kenmerk van dat product.
+Elke zin moet duidelijk verschillend zijn — geen herhaling van dezelfde tekst!
+Antwoord ALLEEN met JSON:
+{"pitches":[{"handle":"product-handle","text":"Zin over dit specifieke product"}]}`;
 
 // ---------- OpenAI client ----------
 
@@ -58,10 +70,10 @@ function getClient(): OpenAI {
   return openaiClient;
 }
 
-async function callGPT(systemPrompt: string, history: ChatMessage[]): Promise<string> {
+async function callGPT(systemPrompt: string, history: ChatMessage[], maxTokens = 256): Promise<string> {
   const completion = await getClient().chat.completions.create({
     model: 'gpt-4o-mini',
-    max_tokens: 256,
+    max_tokens: maxTokens,
     messages: [
       { role: 'system', content: systemPrompt },
       ...history.map((m) => ({ role: m.role, content: m.content })),
@@ -85,7 +97,7 @@ export default function AIAdvisor() {
   const [input, setInput] = useState('');
   const [questionText, setQuestionText] = useState('');
   const [openAnswer, setOpenAnswer] = useState('');
-  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+  const [selectedDiets, setSelectedDiets] = useState<string[]>([]);
   const [results, setResults] = useState<AdvisorResult[]>([]);
   const [summary, setSummary] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -115,7 +127,7 @@ export default function AIAdvisor() {
     }
   }
 
-  // ---- Step 2: open answer confirmed → brand question ----
+  // ---- Step 2: open answer confirmed → dietary question ----
   function handleQuestionConfirm(e: React.SyntheticEvent) {
     e.preventDefault();
     if (!openAnswer.trim()) return;
@@ -126,72 +138,139 @@ export default function AIAdvisor() {
       { role: 'user', content: openAnswer.trim() },
     ];
 
-    setSelectedBrand(null);
-    setPhase('brands');
+    setSelectedDiets([]);
+    setPhase('diets');
   }
 
-  // ---- Step 3: brand selected → fetch results ----
-  async function handleBrandConfirm() {
-    if (!selectedBrand || phase === 'loading') return;
+  // ---- Diet toggle handler ----
+  function toggleDiet(diet: string) {
+    setSelectedDiets((prev) => {
+      if (diet === NO_PREFERENCE) {
+        // Selecting "geen wensen" clears everything else
+        return prev.includes(NO_PREFERENCE) ? [] : [NO_PREFERENCE];
+      }
+      // Selecting any specific diet clears "geen wensen"
+      const withoutNoPref = prev.filter((d) => d !== NO_PREFERENCE);
+      return withoutNoPref.includes(diet)
+        ? withoutNoPref.filter((d) => d !== diet)
+        : [...withoutNoPref, diet];
+    });
+  }
+
+  // ---- Tag-based dietary filter ----
+  function matchesDietaryPrefs(product: Product, prefs: string[]): boolean {
+    if (prefs.length === 0 || prefs.includes(NO_PREFERENCE)) return true;
+    const lowerTags = product.tags.map((t) => t.toLowerCase());
+    // Every selected preference must match at least one BEWUST-* tag
+    return prefs.every((pref) => {
+      const needle = pref.toLowerCase();
+      return lowerTags.some((t) => t.startsWith('bewust-') && t.includes(needle));
+    });
+  }
+
+  // ---- Step 3: diets selected → two-step GPT flow ----
+  async function handleDietsConfirm() {
+    if (selectedDiets.length === 0 || phase === 'loading') return;
     setPhase('loading');
 
-    const brandNote = selectedBrand === 'Geen voorkeur'
-      ? 'De klant heeft geen merkvoorkeur. Kies de beste producten op basis van kwaliteit en populariteit.'
-      : `De klant heeft een voorkeur voor het merk: ${selectedBrand}.`;
+    const dietNote =
+      selectedDiets.includes(NO_PREFERENCE) || selectedDiets.length === 0
+        ? 'De klant heeft geen specifieke dieetwensen of allergieën.'
+        : `De klant heeft de volgende dieetwensen/allergieën: ${selectedDiets.join(', ')}. Houd hier rekening mee in je advies.`;
 
-    const history: ChatMessage[] = [
+    const planHistory: ChatMessage[] = [
       ...historyRef.current,
-      { role: 'user', content: brandNote },
+      { role: 'user', content: dietNote },
     ];
 
     try {
-      const raw = await callGPT(PROMPT_RESULTS, history);
-      const { queries, reasons, summary: sum } = parseJSON<{
+      // ---- Stage A: plan queries + summary ----
+      const rawPlan = await callGPT(PROMPT_PLAN, planHistory);
+      const { queries, summary: sum } = parseJSON<{
         queries: string[];
-        reasons: string[];
         summary: string;
-      }>(raw);
+      }>(rawPlan);
 
       setSummary(sum);
 
-      const preferredBrand = selectedBrand !== 'Geen voorkeur' ? selectedBrand : null;
+      const applyDietFilter = !selectedDiets.includes(NO_PREFERENCE) && selectedDiets.length > 0;
 
-      // No brand preference: sort by BEST_SELLING so Shopify returns the most popular product
-      const sortKey = preferredBrand ? 'RELEVANCE' : 'BEST_SELLING';
-
+      // ---- Stage B: search Shopify for each query ----
       const sets = await Promise.all(
-        queries.map((q, i) =>
-          searchProducts(q, 8, sortKey as 'RELEVANCE' | 'BEST_SELLING')
-            .then((r: { products: Product[] }) => {
-              let products = r.products.filter((p) => p.variants[0]?.availableForSale);
-              if (preferredBrand) {
-                const brandHits = products.filter((p) => p.vendor === preferredBrand);
-                const others = products.filter((p) => p.vendor !== preferredBrand);
-                products = [...brandHits, ...others];
-              }
-              return products.slice(0, 3).map((p) => ({ product: p, reason: reasons[i] ?? '' }));
-            })
+        queries.map((q) =>
+          searchProducts(q, 10, 'BEST_SELLING' as const).then((r) =>
+            r.products.filter((p) => p.variants[0]?.availableForSale)
+          )
         )
       );
 
+      // Merge unique products, preferring dietary matches
       const seen = new Set<string>();
-      const merged: AdvisorResult[] = [];
+      const dietMatches: Product[] = [];
+      const otherProducts: Product[] = [];
+
       for (const set of sets) {
-        for (const item of set) {
-          if (!seen.has(item.product.handle)) {
-            seen.add(item.product.handle);
-            merged.push(item);
-            if (merged.length >= 5) break;
+        for (const product of set) {
+          if (seen.has(product.handle)) continue;
+          seen.add(product.handle);
+          if (!applyDietFilter || matchesDietaryPrefs(product, selectedDiets)) {
+            dietMatches.push(product);
+          } else {
+            otherProducts.push(product);
           }
         }
-        if (merged.length >= 5) break;
       }
+
+      // Pick top 5: prefer diet-matching; fall back to others if needed
+      let selected = dietMatches.slice(0, 5);
+      if (selected.length < 5) {
+        selected = [...selected, ...otherProducts.slice(0, 5 - selected.length)];
+      }
+
+      if (selected.length === 0) {
+        throw new Error('Geen producten gevonden voor jouw situatie.');
+      }
+
+      // ---- Stage C: pitch each product individually ----
+      const productDigest = selected
+        .map((p) => ({
+          handle: p.handle,
+          title: p.title,
+          vendor: p.vendor,
+          description: (p.description || '').slice(0, 200),
+          tags: p.tags.slice(0, 15),
+        }));
+
+      const pitchHistory: ChatMessage[] = [
+        ...planHistory,
+        {
+          role: 'user',
+          content: `Hier zijn de gevonden producten:\n${JSON.stringify(productDigest, null, 2)}`,
+        },
+      ];
+
+      let pitchMap = new Map<string, string>();
+      try {
+        const rawPitch = await callGPT(PROMPT_PITCH, pitchHistory, 700);
+        const { pitches } = parseJSON<{
+          pitches: { handle: string; text: string }[];
+        }>(rawPitch);
+        pitchMap = new Map(pitches.map((p) => [p.handle, p.text]));
+      } catch {
+        // If pitch call fails, we still show products without custom reasons
+        pitchMap = new Map();
+      }
+
+      const merged: AdvisorResult[] = selected.map((product) => ({
+        product,
+        reason: pitchMap.get(product.handle) ?? '',
+      }));
 
       setResults(merged);
       setPhase('results');
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Er is iets misgegaan');
-      setPhase('brands');
+      setPhase('diets');
     }
   }
 
@@ -203,11 +282,11 @@ export default function AIAdvisor() {
 
   function reset() {
     setPhase('idle'); setInput(''); setQuestionText(''); setOpenAnswer('');
-    setSelectedBrand(null); setResults([]); setSummary(''); setErrorMsg('');
+    setSelectedDiets([]); setResults([]); setSummary(''); setErrorMsg('');
     historyRef.current = [];
   }
 
-  const stepMap: Record<Phase, number> = { idle: 0, loading: 0, question: 1, brands: 2, results: 3 };
+  const stepMap: Record<Phase, number> = { idle: 0, loading: 0, question: 1, diets: 2, results: 3 };
   const currentStep = stepMap[phase];
   const totalSteps = 3;
 
@@ -426,10 +505,10 @@ export default function AIAdvisor() {
                 </motion.div>
               )}
 
-              {/* BRAND PREFERENCE */}
-              {phase === 'brands' && (
+              {/* DIETARY PREFERENCES */}
+              {phase === 'diets' && (
                 <motion.div
-                  key="brands"
+                  key="diets"
                   initial={{ opacity: 0, x: 24 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -24 }}
@@ -437,32 +516,45 @@ export default function AIAdvisor() {
                   className="flex-1 flex flex-col"
                 >
                   <p className="text-base font-semibold text-white mb-1 leading-snug">
-                    Heb je een voorkeur voor een bepaald merk?
+                    Heb je allergieën of dieetwensen?
                   </p>
                   <p className="text-xs text-white/50 mb-4">
-                    Kies een merk of ga zonder voorkeur verder — wij kiezen dan de best beoordeelde optie.
+                    Selecteer alles wat van toepassing is. Wij filteren daarop in het advies.
                   </p>
                   <div className="grid grid-cols-2 gap-2 mb-5">
-                    {BRANDS.map((brand) => (
-                      <button
-                        key={brand}
-                        onClick={() => setSelectedBrand(brand)}
-                        className={`flex items-center gap-2 text-left px-3 py-2.5 rounded-xl border text-sm font-medium transition-all ${
-                          selectedBrand === brand
-                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/15 text-white'
-                            : 'border-white/10 bg-white/5 text-white/70 hover:border-[var(--color-primary)]/40 hover:bg-white/10'
-                        } ${brand === 'Geen voorkeur' ? 'col-span-2' : ''}`}
-                      >
-                        <span
-                          className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-all ${
-                            selectedBrand === brand
-                              ? 'border-[var(--color-primary)] bg-[var(--color-primary)]'
-                              : 'border-white/30'
-                          }`}
-                        />
-                        {brand}
-                      </button>
-                    ))}
+                    {DIETARY_PREFERENCES.map((diet) => {
+                      const checked = selectedDiets.includes(diet);
+                      return (
+                        <button
+                          key={diet}
+                          onClick={() => toggleDiet(diet)}
+                          className={`flex items-center gap-2 text-left px-3 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                            checked
+                              ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/15 text-white'
+                              : 'border-white/10 bg-white/5 text-white/70 hover:border-[var(--color-primary)]/40 hover:bg-white/10'
+                          } ${diet === NO_PREFERENCE ? 'col-span-2' : ''}`}
+                        >
+                          <span
+                            className={`w-4 h-4 rounded-md border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+                              checked
+                                ? 'border-[var(--color-primary)] bg-[var(--color-primary)]'
+                                : 'border-white/30'
+                            }`}
+                          >
+                            {checked && (
+                              <svg className="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor">
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            )}
+                          </span>
+                          {diet}
+                        </button>
+                      );
+                    })}
                   </div>
                   {errorMsg && (
                     <div className="mb-3 flex items-start gap-2 text-red-400 text-xs">
@@ -471,8 +563,8 @@ export default function AIAdvisor() {
                     </div>
                   )}
                   <button
-                    onClick={handleBrandConfirm}
-                    disabled={!selectedBrand}
+                    onClick={handleDietsConfirm}
+                    disabled={selectedDiets.length === 0}
                     className="btn-primary w-full py-3 text-sm disabled:opacity-40 disabled:cursor-not-allowed mt-auto"
                   >
                     Bekijk mijn advies

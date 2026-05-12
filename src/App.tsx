@@ -11,6 +11,7 @@ import Collection from './pages/Collection';
 import Product from './pages/Product';
 import Search from './pages/Search';
 import Account from './pages/Account';
+import Brand from './pages/Brand';
 
 const pageTransition = {
   initial: { opacity: 0, y: 8 },
@@ -39,6 +40,7 @@ export default function App() {
                 <Routes location={location}>
                   <Route path="/" element={<Home />} />
                   <Route path="/collectie/:handle" element={<Collection />} />
+                  <Route path="/merken/:brand" element={<Brand />} />
                   <Route path="/product/:handle" element={<Product />} />
                   <Route path="/zoeken" element={<Search />} />
                   <Route path="/account" element={<Account />} />

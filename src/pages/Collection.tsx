@@ -1,70 +1,220 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
-import { getCollectionProducts, sortByBrandRelevance, type Product, type Collection as CollectionType, type CollectionProductsResult } from '../lib/shopify';
+import { X } from 'lucide-react';
+import { getAllCollectionProducts, getProductCategories, sortByBrandRelevance, type Product, type Collection as CollectionType } from '../lib/shopify';
 import ProductCard from '../components/ProductCard';
 import FilterSidebar from '../components/FilterSidebar';
+
+const PAGE_SIZE = 24;
+
+type SortKey = 'recommended' | 'price-asc' | 'price-desc' | 'name';
+
+export const DIET_OPTIONS = [
+  { key: 'vegan', label: 'Vegan', test: (tags: string[]) => tags.some((t) => /vega/i.test(t)) },
+  { key: 'bio', label: 'Biologisch', test: (tags: string[]) => tags.some((t) => /biolog/i.test(t)) },
+  { key: 'suikervrij', label: 'Suikervrij', test: (tags: string[]) => tags.some((t) => /suikervr/i.test(t)) },
+];
 
 export default function Collection() {
   const { handle } = useParams<{ handle: string }>();
   const [collection, setCollection] = useState<CollectionType | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [pageInfo, setPageInfo] = useState<{ hasNextPage: boolean; endCursor: string } | null>(null);
-  const [sortBy, setSortBy] = useState('BEST_SELLING');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedDiets, setSelectedDiets] = useState<string[]>([]);
+  const [inStockOnly, setInStockOnly] = useState(false);
+  const [sortBy, setSortBy] = useState<SortKey>('recommended');
 
   useEffect(() => {
     if (!handle) return;
     setLoading(true);
     setProducts([]);
+    setVisibleCount(PAGE_SIZE);
     setSelectedBrands([]);
     setSelectedIngredients([]);
+    setSelectedCategories([]);
+    setSelectedDiets([]);
+    setInStockOnly(false);
+    setSortBy('recommended');
 
-    getCollectionProducts(handle, 24)
-      .then((data: CollectionProductsResult) => {
+    getAllCollectionProducts(handle)
+      .then((data) => {
         setCollection(data.collection);
         setProducts(sortByBrandRelevance(data.products));
-        setPageInfo(data.pageInfo);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [handle]);
 
-  const loadMore = async () => {
-    if (!handle || !pageInfo?.hasNextPage || loadingMore) return;
-    setLoadingMore(true);
-    try {
-      const data = await getCollectionProducts(handle, 24, pageInfo.endCursor);
-      setProducts((prev) => sortByBrandRelevance([...prev, ...data.products]));
-      setPageInfo(data.pageInfo);
-    } finally {
-      setLoadingMore(false);
+  // Pre-compute category memberships once per product set.
+  const productCategoryKeys = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const p of products) {
+      map.set(p.id, getProductCategories(p.productType).map((c) => c.key));
     }
-  };
+    return map;
+  }, [products]);
 
-  const filteredProducts = useMemo(() => {
-    let result = products;
-
-    if (selectedBrands.length > 0) {
-      result = result.filter((p) => selectedBrands.includes(p.vendor));
+  // Category facets for the pill row: { key, label, count } sorted by count desc.
+  // Counts are based on the full collection (not affected by other filters),
+  // so the pills stay stable and predictable.
+  const categoryFacets = useMemo(() => {
+    const counts = new Map<string, { label: string; count: number }>();
+    for (const p of products) {
+      for (const cat of getProductCategories(p.productType)) {
+        const entry = counts.get(cat.key);
+        if (entry) entry.count += 1;
+        else counts.set(cat.key, { label: cat.label, count: 1 });
+      }
     }
+    return [...counts.entries()]
+      .map(([key, { label, count }]) => ({ key, label, count }))
+      // Hide the "Overig" bucket unless it has meaningful volume.
+      .filter((f) => f.key !== 'overig' || f.count >= 3)
+      .sort((a, b) => b.count - a.count);
+  }, [products]);
 
-    if (selectedIngredients.length > 0) {
-      result = result.filter((p) =>
+  /**
+   * Apply all active filters, optionally skipping one. Used for live counts:
+   * the count of a checkbox option inside section X reflects how many products
+   * would remain if the user ticked that option, given all *other* active filters.
+   * So when computing counts for section X, we exclude X itself.
+   */
+  type FilterKey = 'brand' | 'ingredient' | 'diet' | 'stock';
+  const applyFilters = (input: Product[], skip?: FilterKey) => {
+    let r = input;
+    if (selectedCategories.length > 0) {
+      r = r.filter((p) => {
+        const keys = productCategoryKeys.get(p.id) ?? [];
+        return keys.some((k) => selectedCategories.includes(k));
+      });
+    }
+    if (skip !== 'brand' && selectedBrands.length > 0) {
+      r = r.filter((p) => selectedBrands.includes(p.vendor));
+    }
+    if (skip !== 'ingredient' && selectedIngredients.length > 0) {
+      r = r.filter((p) =>
         selectedIngredients.some((ingredient) => p.tags.includes(`INGR-${ingredient}`))
       );
     }
+    if (skip !== 'diet' && selectedDiets.length > 0) {
+      // AND across selected diets
+      r = r.filter((p) =>
+        selectedDiets.every((key) => {
+          const opt = DIET_OPTIONS.find((d) => d.key === key);
+          return opt ? opt.test(p.tags) : true;
+        })
+      );
+    }
+    if (skip !== 'stock' && inStockOnly) {
+      r = r.filter((p) => p.variants.some((v) => v.availableForSale));
+    }
+    return r;
+  };
 
-    return result;
-  }, [products, selectedBrands, selectedIngredients]);
+  const filteredProducts = useMemo(
+    () => applyFilters(products),
+    [products, productCategoryKeys, selectedCategories, selectedBrands, selectedIngredients, selectedDiets, inStockOnly]
+  );
+
+  // Candidate sets for live counts: products matching every filter except the section's own.
+  const facetProducts = useMemo(
+    () => ({
+      brand: applyFilters(products, 'brand'),
+      ingredient: applyFilters(products, 'ingredient'),
+      diet: applyFilters(products, 'diet'),
+      stock: applyFilters(products, 'stock'),
+    }),
+    [products, productCategoryKeys, selectedCategories, selectedBrands, selectedIngredients, selectedDiets, inStockOnly]
+  );
+
+  const sortedProducts = useMemo(() => {
+    if (sortBy === 'recommended') return filteredProducts;
+    const arr = [...filteredProducts];
+    if (sortBy === 'price-asc') {
+      arr.sort((a, b) =>
+        parseFloat(a.priceRange.minVariantPrice.amount) -
+        parseFloat(b.priceRange.minVariantPrice.amount)
+      );
+    } else if (sortBy === 'price-desc') {
+      arr.sort((a, b) =>
+        parseFloat(b.priceRange.minVariantPrice.amount) -
+        parseFloat(a.priceRange.minVariantPrice.amount)
+      );
+    } else if (sortBy === 'name') {
+      arr.sort((a, b) => a.title.localeCompare(b.title, 'nl'));
+    }
+    return arr;
+  }, [filteredProducts, sortBy]);
+
+  // Reset visible count when filters or sort change so user starts fresh
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [selectedCategories, selectedBrands, selectedIngredients, selectedDiets, inStockOnly, sortBy]);
+
+  const toggleCategory = (key: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
+
+  // Flatten all active filters into one removable list for the chip-row above the grid.
+  const activeFilters = useMemo(() => {
+    const list: { id: string; label: string; onRemove: () => void }[] = [];
+    selectedCategories.forEach((k) => {
+      const facet = categoryFacets.find((f) => f.key === k);
+      if (facet) list.push({ id: `c-${k}`, label: facet.label, onRemove: () => toggleCategory(k) });
+    });
+    selectedBrands.forEach((b) => {
+      list.push({
+        id: `b-${b}`,
+        label: b,
+        onRemove: () => setSelectedBrands(selectedBrands.filter((x) => x !== b)),
+      });
+    });
+    selectedIngredients.forEach((i) => {
+      list.push({
+        id: `i-${i}`,
+        label: i.replace(/-&-/g, ' & ').replace(/-/g, ' '),
+        onRemove: () => setSelectedIngredients(selectedIngredients.filter((x) => x !== i)),
+      });
+    });
+    selectedDiets.forEach((d) => {
+      const opt = DIET_OPTIONS.find((o) => o.key === d);
+      if (opt) {
+        list.push({
+          id: `d-${d}`,
+          label: opt.label,
+          onRemove: () => setSelectedDiets(selectedDiets.filter((x) => x !== d)),
+        });
+      }
+    });
+    if (inStockOnly) {
+      list.push({ id: 'stock', label: 'Alleen op voorraad', onRemove: () => setInStockOnly(false) });
+    }
+    return list;
+  }, [selectedCategories, selectedBrands, selectedIngredients, selectedDiets, inStockOnly, categoryFacets]);
+
+  const visibleProducts = useMemo(
+    () => sortedProducts.slice(0, visibleCount),
+    [sortedProducts, visibleCount]
+  );
+  const hasMore = visibleCount < sortedProducts.length;
+
+  const loadMore = () => {
+    setVisibleCount((c) => Math.min(c + PAGE_SIZE, sortedProducts.length));
+  };
 
   const clearFilters = () => {
     setSelectedBrands([]);
     setSelectedIngredients([]);
+    setSelectedCategories([]);
+    setSelectedDiets([]);
+    setInStockOnly(false);
   };
 
   if (loading) {
@@ -123,25 +273,72 @@ export default function Collection() {
           <p className="mt-3 text-[var(--color-muted)] max-w-2xl">{collection.description}</p>
         )}
 
-        <div className="mt-6 flex items-center justify-between">
+        <div className="mt-6 flex items-center justify-between gap-4">
           <p className="text-sm text-[var(--color-muted)]">
             {filteredProducts.length} product{filteredProducts.length !== 1 ? 'en' : ''}
             {filteredProducts.length !== products.length && (
               <span className="text-[var(--color-muted)]"> van {products.length}</span>
             )}
           </p>
+          <label className="flex items-center gap-2 text-sm text-[var(--color-muted)]">
+            <span className="hidden sm:inline">Sorteer op</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortKey)}
+              className="rounded-full border border-[var(--color-border)] bg-white px-3 py-1.5 pr-8 text-sm font-medium text-[var(--color-navy)] cursor-pointer hover:border-[var(--color-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors"
+            >
+              <option value="recommended">Aanbevolen</option>
+              <option value="price-asc">Prijs &uarr;</option>
+              <option value="price-desc">Prijs &darr;</option>
+              <option value="name">Naam A&ndash;Z</option>
+            </select>
+          </label>
         </div>
+
+        {categoryFacets.length >= 2 && (
+          <div className="mt-5 flex flex-wrap gap-2">
+            {categoryFacets.map(({ key, label, count }) => {
+              const active = selectedCategories.includes(key);
+              return (
+                <button
+                  key={key}
+                  onClick={() => toggleCategory(key)}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors border ${
+                    active
+                      ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
+                      : 'bg-white text-[var(--color-navy)] border-[var(--color-border)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]'
+                  }`}
+                >
+                  <span>{label}</span>
+                  <span
+                    className={`text-xs tabular-nums ${
+                      active ? 'text-white/80' : 'text-[var(--color-muted)]'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </motion.div>
 
       {/* Mobile filter */}
       <div className="lg:hidden">
         <FilterSidebar
           products={products}
+          facetProducts={facetProducts}
           selectedBrands={selectedBrands}
           selectedIngredients={selectedIngredients}
+          selectedDiets={selectedDiets}
+          inStockOnly={inStockOnly}
           onBrandsChange={setSelectedBrands}
           onIngredientsChange={setSelectedIngredients}
+          onDietsChange={setSelectedDiets}
+          onInStockChange={setInStockOnly}
           onClear={clearFilters}
+          dietOptions={DIET_OPTIONS}
         />
       </div>
 
@@ -151,11 +348,17 @@ export default function Collection() {
         <div className="hidden lg:block">
           <FilterSidebar
             products={products}
+            facetProducts={facetProducts}
             selectedBrands={selectedBrands}
             selectedIngredients={selectedIngredients}
+            selectedDiets={selectedDiets}
+            inStockOnly={inStockOnly}
             onBrandsChange={setSelectedBrands}
             onIngredientsChange={setSelectedIngredients}
+            onDietsChange={setSelectedDiets}
+            onInStockChange={setInStockOnly}
             onClear={clearFilters}
+            dietOptions={DIET_OPTIONS}
           />
         </div>
 
@@ -177,27 +380,42 @@ export default function Collection() {
             </div>
           ) : (
             <>
+              {activeFilters.length > 0 && (
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  {activeFilters.map((f) => (
+                    <button
+                      key={f.id}
+                      onClick={f.onRemove}
+                      className="inline-flex items-center gap-1.5 pl-3 pr-2 py-1 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-xs font-medium hover:bg-[var(--color-primary)]/15 transition-colors"
+                    >
+                      <span>{f.label}</span>
+                      <X className="w-3 h-3" />
+                    </button>
+                  ))}
+                  {activeFilters.length >= 2 && (
+                    <button
+                      onClick={clearFilters}
+                      className="text-xs font-medium text-[var(--color-muted)] hover:text-[var(--color-navy)] transition-colors ml-1"
+                    >
+                      Wis alles
+                    </button>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {filteredProducts.map((product, i) => (
+                {visibleProducts.map((product, i) => (
                   <ProductCard key={product.id} product={product} index={i} />
                 ))}
               </div>
 
-              {pageInfo?.hasNextPage && (
+              {hasMore && (
                 <div className="mt-12 text-center">
                   <button
                     onClick={loadMore}
-                    disabled={loadingMore}
                     className="btn-secondary px-8 py-3 text-sm gap-2"
                   >
-                    {loadingMore ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Laden...
-                      </>
-                    ) : (
-                      'Meer producten laden'
-                    )}
+                    Meer producten laden
                   </button>
                 </div>
               )}

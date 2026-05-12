@@ -454,6 +454,59 @@ export async function getCollectionProducts(handle: string, first = 24, after?: 
   return result;
 }
 
+export interface AllCollectionProductsResult {
+  collection: Collection;
+  products: Product[];
+}
+
+/**
+ * Fetch a collection plus *every* product inside it. Paginates internally
+ * with Shopify's max page size (250) until hasNextPage is false.
+ * Designed for collections up to a few hundred products.
+ */
+export async function getAllCollectionProducts(handle: string): Promise<AllCollectionProductsResult> {
+  const key = `collection-all:${handle}`;
+  const cached = cacheGet<AllCollectionProductsResult>(key);
+  if (cached) return cached;
+
+  const PAGE_SIZE = 250;
+  let collection: Collection | null = null;
+  const products: Product[] = [];
+  let cursor: string | null = null;
+
+  for (let page = 0; page < 20; page++) {
+    const data: any = await shopifyFetch<any>(
+      `${PRODUCT_CARD_FRAGMENT}
+      query AllCollectionProducts($handle: String!, $first: Int!, $after: String) {
+        collection(handle: $handle) {
+          id
+          title
+          handle
+          description
+          image { url altText }
+          products(first: $first, after: $after, sortKey: BEST_SELLING) {
+            pageInfo { hasNextPage endCursor }
+            edges { node { ...ProductCardFields } }
+          }
+        }
+      }`,
+      { handle, first: PAGE_SIZE, after: cursor }
+    );
+
+    if (!data.collection) throw new Error('Collection not found');
+    if (!collection) collection = data.collection as Collection;
+    for (const edge of data.collection.products.edges) {
+      products.push(reshapeProduct(edge.node));
+    }
+    if (!data.collection.products.pageInfo.hasNextPage) break;
+    cursor = data.collection.products.pageInfo.endCursor;
+  }
+
+  const result = { collection: collection!, products };
+  cacheSet(key, result, TTL.PRODUCTS);
+  return result;
+}
+
 // ---------- Homepage Batched Query ----------
 
 export async function getHomepageData(productCount = 8) {
@@ -486,6 +539,31 @@ export async function getHomepageData(productCount = 8) {
     products: data.products.edges.map((e: any) => reshapeProduct(e.node)) as Product[],
     collections: data.collections.edges.map((e: any) => e.node) as Collection[],
   };
+  cacheSet(key, result, TTL.PRODUCTS);
+  return result;
+}
+
+/**
+ * Lichte query voor de homepage die NIET op BEST_SELLING sorteert
+ * (deze sortKey geeft een Shopify INTERNAL_SERVER_ERROR voor winkels
+ * met onvoldoende sales-data). Sorteert op nieuwste producten.
+ */
+export async function getFeaturedProducts(count = 4): Promise<Product[]> {
+  const key = `featured:${count}`;
+  const cached = cacheGet<Product[]>(key);
+  if (cached) return cached;
+
+  const data = await shopifyFetch<any>(
+    `${PRODUCT_CARD_FRAGMENT}
+    query FeaturedProducts($first: Int!) {
+      products(first: $first, sortKey: CREATED_AT, reverse: true) {
+        edges { node { ...ProductCardFields } }
+      }
+    }`,
+    { first: count }
+  );
+
+  const result = data.products.edges.map((e: any) => reshapeProduct(e.node)) as Product[];
   cacheSet(key, result, TTL.PRODUCTS);
   return result;
 }
@@ -628,7 +706,230 @@ export function menuItemToRoute(item: MenuItem): string | null {
     const page = item.url.match(/\/pages\/([^/?#]+)/);
     if (page) return `/pagina/${page[1]}`;
   }
+  if (/\/merken\b/i.test(item.url) || item.title.trim().toLowerCase() === 'merken') {
+    return '/merken';
+  }
   return null;
+}
+
+// ---------- Brand Queries ----------
+
+export interface BrandSummary {
+  name: string;
+  handle: string;
+  count: number;
+  categoryKey: string;
+  categoryLabel: string;
+  productType: string;
+}
+
+/** Turn a vendor string into a URL-safe slug */
+export function brandSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Category buckets that brands are grouped into on the /merken overview and
+ * the "Merken" dropdown in the header. Order matters — used for section order.
+ */
+// NOTE: order matters. More specific matchers must come first because
+// `categorizeProductType` returns on the first hit. E.g. "Spierverzorging en
+// Gewrichtsverzorging" must hit the Sport bucket before the generic verzorging one.
+export const BRAND_CATEGORIES: { key: string; label: string; match: (productType: string) => boolean }[] = [
+  {
+    key: 'sport-herstel',
+    label: 'Sport & Herstel',
+    match: (t) =>
+      /brace|bandage|tape|orthese|spierverzorg|gewricht|sport|herstel|recovery|fysio|mobiliteit|oefening|therapie|ehbo|kompres/i.test(
+        t
+      ),
+  },
+  {
+    key: 'supplementen',
+    label: 'Supplementen & Vitamines',
+    match: (t) =>
+      /supplement|vitamin|mineral|kruid|herb|probiot|vetzu|aminozu|omega/i.test(t),
+  },
+  {
+    key: 'voeding',
+    label: 'Bewuste Voeding',
+    match: (t) =>
+      /voeding|food|superfood|drank|drink|thee|tea|repen|snack|ontbijt|shake|maaltijdvervang/i.test(
+        t
+      ),
+  },
+  {
+    key: 'verzorging',
+    label: 'Persoonlijke Verzorging',
+    match: (t) =>
+      /lichaamsverzorg|huidverzorg|haarverzorg|mondverzorg|dental|etherisch|aroma|essential|oliën|olieen|lichaamsolie/i.test(
+        t
+      ),
+  },
+  {
+    key: 'lifestyle',
+    label: 'Lifestyle & Accessoires',
+    match: (t) =>
+      /instrument|badkamer|toilet|beschermho|apparaat|device|gadget|accessoire|lifestyle|koken|tafelen|thermometer|glucosemeter|bloeddrukmet|manchet|meter/i.test(
+        t
+      ),
+  },
+];
+export const BRAND_CATEGORY_OTHER = { key: 'overig', label: 'Overige Merken' };
+
+/** Pick the best-matching category for a dominant productType. */
+export function categorizeProductType(productType: string): { key: string; label: string } {
+  const t = (productType || '').trim();
+  if (!t) return BRAND_CATEGORY_OTHER;
+  for (const cat of BRAND_CATEGORIES) {
+    if (cat.match(t)) return { key: cat.key, label: cat.label };
+  }
+  return BRAND_CATEGORY_OTHER;
+}
+
+/**
+ * Coarse buckets used by the Collection-page sub-filter pills.
+ *
+ * Intentionally separate from BRAND_CATEGORIES so that tuning these regexes
+ * never affects the Merken-menu in the header.
+ *
+ *  - supplementen        → to ingest (vitamines, mineralen, aminozuren, kruidextract)
+ *  - voeding             → consumable food (sportvoeding, superfoods, repen, dranken)
+ *  - fysio-verzorging    → externally applied / used (braces, balsem, oliën, gels)
+ *  - lifestyle-wellness  → meet-instrumenten + spiritualiteit (catches what would
+ *                          otherwise dominate "Overig" in Stemming/Bloeddruk/Weerstand)
+ *
+ * Multi-match: a product can fall in multiple buckets (e.g. eiwitshake).
+ */
+const COLLECTION_CATEGORIES: { key: string; label: string; match: (productType: string) => boolean }[] = [
+  {
+    key: 'supplementen',
+    label: 'Supplementen & Vitamines',
+    match: (t) =>
+      /aminozu|mineral|vitamin|voedingssupplement|kruid|herb|supplement|omega|vetzu|probiot|micro-?organism/i.test(t),
+  },
+  {
+    key: 'voeding',
+    label: 'Bewuste Voeding',
+    match: (t) =>
+      /sportvoed|superfood|pasta|rijst|reep|snack|drank|drink|shake|ontbijt|maaltijd|\bthee\b|\btea\b|dessert|soep|bouillon|chocola|honing|aardappel|\bgroente\b|\bfruit\b|koffie/i.test(t),
+  },
+  {
+    key: 'fysio-verzorging',
+    label: 'Fysio & Verzorging',
+    match: (t) =>
+      /verzorg|gewricht|etherisch|aroma|essential|oli(?:ën|en)|brace|bandage|tape|orthese|kompres|fysio|ehbo|balsem|massage|oefening|therapie|\bkruik|spalk|\bkussen|zwachtel|snelverband|inlegzo|geurversprei|mondhygi|\bsteken\b|\bbeten\b|dameshygi|pleister|badkamer|toilet/i.test(t),
+  },
+  {
+    key: 'lifestyle-wellness',
+    label: 'Lifestyle & Wellness',
+    match: (t) =>
+      /spiritualiteit|thermometer|glucosemet|bloeddrukmet|manchet|instrument/i.test(t),
+  },
+];
+
+const COLLECTION_CATEGORY_OTHER = { key: 'overig', label: 'Overig' };
+
+/**
+ * Return *all* matching collection-pill categories for a productType.
+ * A product can belong to multiple buckets (e.g. an eiwitshake matches both
+ * Voeding via "shake" and Supplementen via "aminozu" if its productType says so).
+ * Falls back to "Overig" if no rule matches.
+ */
+export function getProductCategories(productType: string): { key: string; label: string }[] {
+  const t = (productType || '').trim();
+  if (!t) return [COLLECTION_CATEGORY_OTHER];
+  const matches = COLLECTION_CATEGORIES.filter((c) => c.match(t)).map(({ key, label }) => ({ key, label }));
+  return matches.length > 0 ? matches : [COLLECTION_CATEGORY_OTHER];
+}
+
+/** Fetch all unique brands (vendors) with product counts, sorted by count desc. */
+export async function getAllBrands(): Promise<BrandSummary[]> {
+  const key = 'brands:all:v4';
+  const cached = cacheGet<BrandSummary[]>(key);
+  if (cached) return cached;
+
+  // Lightweight vendor + productType query. Paginated to cover the full catalog.
+  const all: { vendor: string; productType: string }[] = [];
+  let cursor: string | null = null;
+  for (let page = 0; page < 40; page++) {
+    const data: any = await shopifyFetch<any>(
+      `query Brands($first: Int!, $after: String) {
+        products(first: $first, after: $after) {
+          pageInfo { hasNextPage endCursor }
+          edges { node { vendor productType } }
+        }
+      }`,
+      { first: 100, after: cursor }
+    );
+    for (const edge of data.products.edges) all.push(edge.node);
+    if (!data.products.pageInfo.hasNextPage) break;
+    cursor = data.products.pageInfo.endCursor;
+  }
+
+  // Aggregate per vendor: total count + dominant productType
+  const perBrand = new Map<string, { count: number; types: Map<string, number> }>();
+  for (const p of all) {
+    const vendor = (p.vendor || '').trim();
+    if (!vendor) continue;
+    const entry = perBrand.get(vendor) ?? { count: 0, types: new Map<string, number>() };
+    entry.count += 1;
+    const pt = (p.productType || '').trim();
+    if (pt) entry.types.set(pt, (entry.types.get(pt) ?? 0) + 1);
+    perBrand.set(vendor, entry);
+  }
+
+  const result: BrandSummary[] = [...perBrand.entries()]
+    .map(([name, { count, types }]) => {
+      // Dominant productType
+      let dominant = '';
+      let best = 0;
+      for (const [pt, c] of types) {
+        if (c > best) {
+          best = c;
+          dominant = pt;
+        }
+      }
+      const cat = categorizeProductType(dominant);
+      return {
+        name,
+        handle: brandSlug(name),
+        count,
+        categoryKey: cat.key,
+        categoryLabel: cat.label,
+        productType: dominant,
+      };
+    })
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+
+  cacheSet(key, result, TTL.PRODUCTS);
+  return result;
+}
+
+/** Fetch all products for a given vendor name (exact match). */
+export async function getProductsByBrand(vendorName: string): Promise<Product[]> {
+  const key = `brand-products:${vendorName}`;
+  const cached = cacheGet<Product[]>(key);
+  if (cached) return cached;
+
+  const data = await shopifyFetch<any>(
+    `${PRODUCT_CARD_FRAGMENT}
+    query BrandProducts($query: String!, $first: Int!) {
+      products(first: $first, query: $query, sortKey: BEST_SELLING) {
+        edges { node { ...ProductCardFields } }
+      }
+    }`,
+    { query: `vendor:"${vendorName.replace(/"/g, '\\"')}"`, first: 100 }
+  );
+
+  const result: Product[] = data.products.edges.map((e: any) => reshapeProduct(e.node));
+  cacheSet(key, result, TTL.PRODUCTS);
+  return result;
 }
 
 // ---------- Customer Auth ----------

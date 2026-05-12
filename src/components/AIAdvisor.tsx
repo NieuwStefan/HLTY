@@ -312,8 +312,8 @@ export default function AIAdvisor() {
           {/* Left: Info column */}
           <div className="p-8 sm:p-12 flex flex-col justify-center border-b lg:border-b-0 lg:border-r border-white/10">
             <div className="inline-flex w-fit items-center gap-2 px-4 py-2 rounded-full bg-[var(--color-primary)]/20 text-[var(--color-primary)] text-xs font-bold uppercase tracking-widest mb-6">
-              <Sparkles className="w-3.5 h-3.5" />
-              AI Productadviseur
+              <MessageCircle className="w-3.5 h-3.5" />
+              Persoonlijk advies
             </div>
 
             <h2
@@ -326,7 +326,8 @@ export default function AIAdvisor() {
             </h2>
 
             <p className="mt-5 text-white/60 text-base leading-relaxed max-w-md">
-              Beschrijf je situatie in eigen woorden en onze AI-adviseur zoekt de beste producten voor jou uit ons volledige assortiment.
+              Beschrijf je situatie in eigen woorden — wij zoeken op basis van je
+              antwoord de meest passende producten uit ons volledige assortiment.
             </p>
 
             {/* Features */}

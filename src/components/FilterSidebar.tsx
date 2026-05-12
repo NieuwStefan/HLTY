@@ -1,15 +1,37 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, X, SlidersHorizontal } from 'lucide-react';
+import { ChevronDown, X, SlidersHorizontal, Plus, Minus } from 'lucide-react';
 import type { Product } from '../lib/shopify';
+
+const VISIBLE_ITEMS = 6;
+
+function prettyLabel(s: string) {
+  return s.replace(/-&-/g, ' & ').replace(/-/g, ' ');
+}
 
 interface FilterSidebarProps {
   products: Product[];
+  /**
+   * Per-section candidate sets for live counts. Each is the result of applying
+   * every active filter *except* the section's own — so counts reflect "how many
+   * remain if you tick this option, given everything else you've already chosen".
+   */
+  facetProducts: {
+    brand: Product[];
+    ingredient: Product[];
+    diet: Product[];
+    stock: Product[];
+  };
   selectedBrands: string[];
   selectedIngredients: string[];
+  selectedDiets: string[];
+  inStockOnly: boolean;
   onBrandsChange: (brands: string[]) => void;
   onIngredientsChange: (ingredients: string[]) => void;
+  onDietsChange: (diets: string[]) => void;
+  onInStockChange: (v: boolean) => void;
   onClear: () => void;
+  dietOptions: { key: string; label: string; test: (tags: string[]) => boolean }[];
 }
 
 function FilterSection({
@@ -80,26 +102,40 @@ function CheckboxItem({
 
 export default function FilterSidebar({
   products,
+  facetProducts,
   selectedBrands,
   selectedIngredients,
+  selectedDiets,
+  inStockOnly,
   onBrandsChange,
   onIngredientsChange,
+  onDietsChange,
+  onInStockChange,
   onClear,
+  dietOptions,
 }: FilterSidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const hasFilters = selectedBrands.length > 0 || selectedIngredients.length > 0;
+  const [brandsExpanded, setBrandsExpanded] = useState(false);
+  const [ingredientsExpanded, setIngredientsExpanded] = useState(false);
+  const hasFilters =
+    selectedBrands.length > 0 ||
+    selectedIngredients.length > 0 ||
+    selectedDiets.length > 0 ||
+    inStockOnly;
 
   const brands = useMemo(() => {
     const map = new Map<string, number>();
-    for (const p of products) {
+    for (const p of facetProducts.brand) {
       if (p.vendor) map.set(p.vendor, (map.get(p.vendor) ?? 0) + 1);
     }
+    // Keep already-selected brands visible even if their candidate count is 0
+    for (const b of selectedBrands) if (!map.has(b)) map.set(b, 0);
     return [...map.entries()].sort((a, b) => b[1] - a[1]);
-  }, [products]);
+  }, [facetProducts.brand, selectedBrands]);
 
   const ingredients = useMemo(() => {
     const map = new Map<string, number>();
-    for (const p of products) {
+    for (const p of facetProducts.ingredient) {
       for (const tag of p.tags) {
         if (tag.startsWith('INGR-')) {
           const name = tag.slice(5);
@@ -107,8 +143,25 @@ export default function FilterSidebar({
         }
       }
     }
+    for (const i of selectedIngredients) if (!map.has(i)) map.set(i, 0);
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [products]);
+  }, [facetProducts.ingredient, selectedIngredients]);
+
+  const inStockCount = useMemo(
+    () => facetProducts.stock.filter((p) => p.variants.some((v) => v.availableForSale)).length,
+    [facetProducts.stock]
+  );
+  const hasOutOfStock = useMemo(
+    () => products.some((p) => !p.variants.some((v) => v.availableForSale)),
+    [products]
+  );
+
+  const dietCounts = useMemo(() => {
+    return dietOptions.map((opt) => ({
+      ...opt,
+      count: facetProducts.diet.filter((p) => opt.test(p.tags)).length,
+    }));
+  }, [facetProducts.diet, dietOptions]);
 
   const toggleBrand = (brand: string) => {
     onBrandsChange(
@@ -126,6 +179,16 @@ export default function FilterSidebar({
     );
   };
 
+  const toggleDiet = (key: string) => {
+    onDietsChange(
+      selectedDiets.includes(key)
+        ? selectedDiets.filter((d) => d !== key)
+        : [...selectedDiets, key]
+    );
+  };
+
+  const visibleDiets = dietCounts.filter((d) => d.count > 0);
+
   const filterContent = (
     <div className="space-y-2">
       {hasFilters && (
@@ -140,13 +203,62 @@ export default function FilterSidebar({
 
       {brands.length > 0 && (
         <FilterSection title="Merk">
-          {brands.map(([brand, count]) => (
+          {(brandsExpanded ? brands : brands.slice(0, VISIBLE_ITEMS)).map(([brand, count]) => (
             <CheckboxItem
               key={brand}
-              label={brand}
+              label={prettyLabel(brand)}
               count={count}
               checked={selectedBrands.includes(brand)}
               onChange={() => toggleBrand(brand)}
+            />
+          ))}
+          {brands.length > VISIBLE_ITEMS && (
+            <button
+              onClick={() => setBrandsExpanded(!brandsExpanded)}
+              className="flex items-center gap-1 px-1 mt-1 text-xs font-medium text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] transition-colors"
+            >
+              {brandsExpanded ? (
+                <>
+                  <Minus className="w-3 h-3" /> Toon minder
+                </>
+              ) : (
+                <>
+                  <Plus className="w-3 h-3" /> Toon {brands.length - VISIBLE_ITEMS} meer
+                </>
+              )}
+            </button>
+          )}
+        </FilterSection>
+      )}
+
+      {hasOutOfStock && (
+        <FilterSection title="Beschikbaarheid">
+          <label className="flex items-center gap-2 py-1 px-1 rounded-lg cursor-pointer hover:bg-black/[0.03] transition-colors group">
+            <input
+              type="checkbox"
+              checked={inStockOnly}
+              onChange={(e) => onInStockChange(e.target.checked)}
+              className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] accent-[var(--color-primary)] cursor-pointer"
+            />
+            <span className="text-sm text-[var(--color-navy)] flex-1 truncate group-hover:text-[var(--color-primary)] transition-colors">
+              Alleen op voorraad
+            </span>
+            <span className="text-xs text-[var(--color-muted)] tabular-nums">
+              {inStockCount}
+            </span>
+          </label>
+        </FilterSection>
+      )}
+
+      {visibleDiets.length > 0 && (
+        <FilterSection title="Dieet & Lifestyle">
+          {visibleDiets.map(({ key, label, count }) => (
+            <CheckboxItem
+              key={key}
+              label={label}
+              count={count}
+              checked={selectedDiets.includes(key)}
+              onChange={() => toggleDiet(key)}
             />
           ))}
         </FilterSection>
@@ -154,15 +266,31 @@ export default function FilterSidebar({
 
       {ingredients.length > 0 && (
         <FilterSection title="Ingrediënten">
-          {ingredients.map(([ingredient, count]) => (
+          {(ingredientsExpanded ? ingredients : ingredients.slice(0, VISIBLE_ITEMS)).map(([ingredient, count]) => (
             <CheckboxItem
               key={ingredient}
-              label={ingredient}
+              label={prettyLabel(ingredient)}
               count={count}
               checked={selectedIngredients.includes(ingredient)}
               onChange={() => toggleIngredient(ingredient)}
             />
           ))}
+          {ingredients.length > VISIBLE_ITEMS && (
+            <button
+              onClick={() => setIngredientsExpanded(!ingredientsExpanded)}
+              className="flex items-center gap-1 px-1 mt-1 text-xs font-medium text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] transition-colors"
+            >
+              {ingredientsExpanded ? (
+                <>
+                  <Minus className="w-3 h-3" /> Toon minder
+                </>
+              ) : (
+                <>
+                  <Plus className="w-3 h-3" /> Toon {ingredients.length - VISIBLE_ITEMS} meer
+                </>
+              )}
+            </button>
+          )}
         </FilterSection>
       )}
     </div>

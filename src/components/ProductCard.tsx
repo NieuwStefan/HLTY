@@ -28,7 +28,7 @@ export default function ProductCard({ product, index = 0 }: Props) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.05 }}
+      transition={{ duration: 0.4, delay: Math.min(index, 7) * 0.05 }}
     >
       <Link to={`/product/${product.handle}`} className="block group">
         <div className="card p-0">

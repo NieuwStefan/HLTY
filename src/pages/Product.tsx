@@ -1,16 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, Check, ChevronLeft, Truck, Shield, RefreshCw } from 'lucide-react';
+import { ShoppingBag, Check, Plus, Minus, Loader2 } from 'lucide-react';
 import {
   getProduct,
   getProductRecommendations,
   type Product as ProductType,
   type ProductVariant,
   formatPrice,
+  brandSlug,
 } from '../lib/shopify';
 import { useCart } from '../context/CartContext';
 import ProductCard from '../components/ProductCard';
+import ProductDescription from '../components/ProductDescription';
+import BrandSection from '../components/BrandSection';
+import { getBrand } from '../data/brands';
+
+const HIDDEN_TAG_PREFIXES = ['DOEL-', 'INGR-', 'BEWUST-', 'BTW'];
+
+function isVisibleTag(tag: string): boolean {
+  const t = tag.trim();
+  if (!t) return false;
+  return !HIDDEN_TAG_PREFIXES.some((p) => t.toLowerCase().startsWith(p.toLowerCase()));
+}
 
 export default function Product() {
   const { handle } = useParams<{ handle: string }>();
@@ -21,18 +33,21 @@ export default function Product() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [added, setAdded] = useState(false);
+  const [quantity, setQuantity] = useState(1);
+  const [showStickyBar, setShowStickyBar] = useState(false);
+  const cartButtonRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!handle) return;
     setLoading(true);
     setAdded(false);
     setSelectedImage(0);
+    setQuantity(1);
 
     getProduct(handle)
       .then((p) => {
         setProduct(p);
         setSelectedVariant(p.variants[0] || null);
-        // Load recommendations
         getProductRecommendations(p.id)
           .then(setRecommendations)
           .catch(() => {});
@@ -41,9 +56,21 @@ export default function Product() {
       .finally(() => setLoading(false));
   }, [handle]);
 
+  // Show the floating mobile bar when the inline add-to-cart leaves the viewport
+  useEffect(() => {
+    const el = cartButtonRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setShowStickyBar(!entry.isIntersecting),
+      { rootMargin: '-80px 0px 0px 0px' }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [product]);
+
   const handleAddToCart = async () => {
     if (!selectedVariant || !selectedVariant.availableForSale) return;
-    await addItem(selectedVariant.id);
+    await addItem(selectedVariant.id, quantity);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
@@ -57,9 +84,7 @@ export default function Product() {
           <div className="h-[20px] bg-black/5 rounded-full w-40 animate-pulse" />
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 animate-pulse">
-          <div className="space-y-4">
-            <div className="card p-0 aspect-square bg-black/5" />
-          </div>
+          <div className="card p-0 aspect-square bg-black/5" />
           <div className="py-2 space-y-4">
             <div className="h-[13px] bg-black/5 rounded-full w-24" />
             <div className="h-[32px] bg-black/5 rounded-full w-3/4" />
@@ -70,7 +95,6 @@ export default function Product() {
               <div className="h-[72px] bg-black/5 rounded-2xl" />
               <div className="h-[72px] bg-black/5 rounded-2xl" />
             </div>
-            <div className="h-[160px] bg-black/5 rounded-2xl mt-8" />
           </div>
         </div>
       </div>
@@ -86,191 +110,318 @@ export default function Product() {
   }
 
   const hasVariants = product.variants.length > 1;
+  const inStock = !!selectedVariant?.availableForSale;
+  const optionName =
+    product.variants[0]?.selectedOptions?.[0]?.name &&
+    product.variants[0].selectedOptions[0].name !== 'Title'
+      ? product.variants[0].selectedOptions[0].name
+      : 'Optie';
+  const visibleTags = product.tags.filter(isVisibleTag).slice(0, 8);
+  const brandHandle = brandSlug(product.vendor || '');
+  const brand = brandHandle ? getBrand(brandHandle) : null;
 
   return (
-    <div className="mx-auto max-w-[1400px] px-4 space-y-16">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-[var(--color-muted)]">
-        <Link to="/" className="hover:text-[var(--color-navy)] transition-colors">Home</Link>
-        <span>/</span>
-        <span className="text-[var(--color-navy)] font-medium truncate">{product.title}</span>
-      </div>
-
-      {/* Product */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
-        {/* Images */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="space-y-4"
-        >
-          <div className="card p-0 aspect-square overflow-hidden bg-white">
-            <AnimatePresence mode="wait">
-              <motion.img
-                key={selectedImage}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                src={product.images[selectedImage]?.url}
-                alt={product.images[selectedImage]?.altText || product.title}
-                className="w-full h-full object-contain p-8"
-              />
-            </AnimatePresence>
-          </div>
-
-          {product.images.length > 1 && (
-            <div className="flex gap-3 overflow-x-auto no-scrollbar">
-              {product.images.map((img, i) => (
-                <button
-                  key={i}
-                  onClick={() => setSelectedImage(i)}
-                  className={`w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all ${
-                    i === selectedImage
-                      ? 'border-[var(--color-primary)] shadow-md'
-                      : 'border-transparent opacity-60 hover:opacity-100'
-                  }`}
-                >
-                  <img src={img.url} alt="" className="w-full h-full object-contain p-1 bg-white" />
-                </button>
-              ))}
-            </div>
+    <>
+      <div className="mx-auto max-w-[1400px] px-4 space-y-16">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-[var(--color-muted)]">
+          <Link to="/" className="hover:text-[var(--color-navy)] transition-colors">
+            Home
+          </Link>
+          <span>/</span>
+          {brandHandle && (
+            <>
+              <Link
+                to={`/merken/${brandHandle}`}
+                className="hover:text-[var(--color-navy)] transition-colors"
+              >
+                {product.vendor}
+              </Link>
+              <span>/</span>
+            </>
           )}
-        </motion.div>
+          <span className="text-[var(--color-navy)] font-medium truncate">{product.title}</span>
+        </div>
 
-        {/* Info */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="py-2"
-        >
-          <p className="text-xs font-bold uppercase tracking-widest text-[var(--color-primary)] mb-3">
-            {product.vendor}
-          </p>
-
-          <h1
-            className="text-2xl sm:text-3xl font-extrabold text-[var(--color-navy)] tracking-tight leading-tight"
-            style={{ fontFamily: 'Montserrat' }}
+        {/* Top: Image + Info */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
+          {/* Images */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="space-y-4"
           >
-            {product.title}
-          </h1>
+            <div className="card p-0 aspect-square overflow-hidden bg-white">
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={selectedImage}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  src={product.images[selectedImage]?.url}
+                  alt={product.images[selectedImage]?.altText || product.title}
+                  className="w-full h-full object-contain p-8"
+                />
+              </AnimatePresence>
+            </div>
 
-          <p className="mt-4 text-2xl font-bold text-[var(--color-navy)]">
-            {selectedVariant ? formatPrice(selectedVariant.price) : formatPrice(product.priceRange.minVariantPrice)}
-          </p>
-
-          {/* Variant Selector */}
-          {hasVariants && (
-            <div className="mt-6">
-              <p className="text-sm font-semibold text-[var(--color-navy)] mb-3">Kies een optie</p>
-              <div className="flex flex-wrap gap-2">
-                {product.variants.map((v) => (
+            {product.images.length > 1 && (
+              <div className="flex gap-3 overflow-x-auto no-scrollbar">
+                {product.images.map((img, i) => (
                   <button
-                    key={v.id}
-                    onClick={() => setSelectedVariant(v)}
-                    disabled={!v.availableForSale}
-                    className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
-                      selectedVariant?.id === v.id
-                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
-                        : v.availableForSale
-                          ? 'border-[var(--color-border)] text-[var(--color-navy)] hover:border-[var(--color-primary)]'
-                          : 'border-[var(--color-border)] text-[var(--color-muted)] opacity-50 line-through cursor-not-allowed'
+                    key={i}
+                    onClick={() => setSelectedImage(i)}
+                    className={`w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all ${
+                      i === selectedImage
+                        ? 'border-[var(--color-primary)] shadow-md'
+                        : 'border-transparent opacity-60 hover:opacity-100'
                     }`}
                   >
-                    {v.title}
+                    <img src={img.url} alt="" className="w-full h-full object-contain p-1 bg-white" />
                   </button>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </motion.div>
 
-          {/* Add to Cart */}
-          <div className="mt-8">
-            <button
-              onClick={handleAddToCart}
-              disabled={isLoading || !selectedVariant?.availableForSale}
-              className={`w-full py-4 rounded-full text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-300 ${
-                added
-                  ? 'bg-green-500 text-white shadow-[0_4px_14px_rgba(34,197,94,0.3)]'
-                  : selectedVariant?.availableForSale
-                    ? 'btn-primary'
-                    : 'bg-black/10 text-[var(--color-muted)] cursor-not-allowed'
-              }`}
+          {/* Info */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="py-2"
+          >
+            {brandHandle ? (
+              <Link
+                to={`/merken/${brandHandle}`}
+                className="inline-block text-xs font-bold uppercase tracking-widest text-[var(--color-primary)] mb-3 hover:underline"
+              >
+                {product.vendor}
+              </Link>
+            ) : (
+              <p className="text-xs font-bold uppercase tracking-widest text-[var(--color-primary)] mb-3">
+                {product.vendor}
+              </p>
+            )}
+
+            <h1
+              className="text-2xl sm:text-3xl font-extrabold text-[var(--color-navy)] tracking-tight leading-tight"
+              style={{ fontFamily: 'Montserrat' }}
             >
-              {added ? (
-                <>
-                  <Check className="w-5 h-5" />
-                  Toegevoegd aan winkelwagen
-                </>
-              ) : selectedVariant?.availableForSale ? (
-                <>
-                  <ShoppingBag className="w-5 h-5" />
-                  In winkelwagen
-                </>
-              ) : (
-                'Uitverkocht'
-              )}
-            </button>
-          </div>
+              {product.title}
+            </h1>
 
-          {/* USPs */}
-          <div className="mt-8 grid grid-cols-3 gap-3">
-            {[
-              { icon: Truck, label: 'Gratis verzending*' },
-              { icon: Shield, label: 'Veilig betalen' },
-              { icon: RefreshCw, label: '30 dagen retour' },
-            ].map(({ icon: Icon, label }) => (
-              <div key={label} className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-[var(--color-surface)] text-center">
-                <Icon className="w-4 h-4 text-[var(--color-primary)]" />
-                <span className="text-[11px] font-medium text-[var(--color-muted)]">{label}</span>
+            {/* Price + Stock */}
+            <div className="mt-4 flex items-center gap-3 flex-wrap">
+              <p className="text-2xl font-bold text-[var(--color-navy)]">
+                {selectedVariant
+                  ? formatPrice(selectedVariant.price)
+                  : formatPrice(product.priceRange.minVariantPrice)}
+              </p>
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${
+                  inStock
+                    ? 'bg-[var(--color-primary-light)] text-[var(--color-primary-dark)]'
+                    : 'bg-red-50 text-red-700'
+                }`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    inStock ? 'bg-[var(--color-primary)]' : 'bg-red-500'
+                  }`}
+                />
+                {inStock ? 'Op voorraad' : 'Uitverkocht'}
+              </span>
+            </div>
+
+            {/* Variant Selector */}
+            {hasVariants && (
+              <div className="mt-6">
+                <p className="text-sm font-semibold text-[var(--color-navy)] mb-3">
+                  {optionName}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {product.variants.map((v) => (
+                    <button
+                      key={v.id}
+                      onClick={() => setSelectedVariant(v)}
+                      disabled={!v.availableForSale}
+                      className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
+                        selectedVariant?.id === v.id
+                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+                          : v.availableForSale
+                            ? 'border-[var(--color-border)] text-[var(--color-navy)] hover:border-[var(--color-primary)]'
+                            : 'border-[var(--color-border)] text-[var(--color-muted)] opacity-50 line-through cursor-not-allowed'
+                      }`}
+                    >
+                      {v.title}
+                    </button>
+                  ))}
+                </div>
               </div>
+            )}
+
+            {/* Qty + Add to Cart */}
+            <div ref={cartButtonRef} className="mt-8 flex items-stretch gap-3">
+              <div className="inline-flex items-center rounded-full border border-[var(--color-border)] bg-white overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  disabled={!inStock || quantity <= 1}
+                  className="w-11 h-12 flex items-center justify-center text-[var(--color-navy)] disabled:text-[var(--color-muted)]/50 disabled:cursor-not-allowed hover:bg-black/[0.03] transition-colors"
+                  aria-label="Aantal verlagen"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <span className="w-8 text-center text-sm font-semibold tabular-nums text-[var(--color-navy)] select-none">
+                  {quantity}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => Math.min(99, q + 1))}
+                  disabled={!inStock}
+                  className="w-11 h-12 flex items-center justify-center text-[var(--color-navy)] disabled:text-[var(--color-muted)]/50 disabled:cursor-not-allowed hover:bg-black/[0.03] transition-colors"
+                  aria-label="Aantal verhogen"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+
+              <button
+                onClick={handleAddToCart}
+                disabled={isLoading || !inStock}
+                className={`flex-1 h-12 rounded-full text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-300 ${
+                  added
+                    ? 'bg-green-500 text-white shadow-[0_4px_14px_rgba(34,197,94,0.3)]'
+                    : inStock
+                      ? 'btn-primary'
+                      : 'bg-black/10 text-[var(--color-muted)] cursor-not-allowed'
+                }`}
+              >
+                {isLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : added ? (
+                  <>
+                    <Check className="w-5 h-5" />
+                    Toegevoegd
+                  </>
+                ) : inStock ? (
+                  <>
+                    <ShoppingBag className="w-5 h-5" />
+                    In winkelwagen
+                  </>
+                ) : (
+                  'Uitverkocht'
+                )}
+              </button>
+            </div>
+
+            {/* Description (accordion inside info column) */}
+            {product.descriptionHtml && (
+              <div className="mt-8">
+                <ProductDescription
+                  html={product.descriptionHtml}
+                  productTitle={product.title}
+                />
+              </div>
+            )}
+          </motion.div>
+        </div>
+
+        {/* Brand section — hardcoded per merk via src/data/brands.ts */}
+        {brand && (
+          <BrandSection
+            brand={brand}
+            onAddToCart={handleAddToCart}
+            canAddToCart={inStock}
+            isLoading={isLoading}
+            added={added}
+          />
+        )}
+
+        {/* Tags (clickable) */}
+        {visibleTags.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {visibleTags.map((tag) => (
+              <Link
+                key={tag}
+                to={`/zoeken?q=${encodeURIComponent(tag)}`}
+                className="px-3 py-1 text-xs font-medium bg-black/5 rounded-full text-[var(--color-muted)] hover:bg-black/10 hover:text-[var(--color-navy)] transition-colors"
+              >
+                {tag}
+              </Link>
             ))}
           </div>
+        )}
 
-          {/* Description */}
-          {product.description && (
-            <div className="mt-8 p-6 rounded-2xl bg-[var(--color-surface)]">
-              <h3 className="text-sm font-bold text-[var(--color-navy)] mb-3" style={{ fontFamily: 'Montserrat' }}>
-                Beschrijving
-              </h3>
-              <div className="text-sm text-[var(--color-navy)]/70 leading-relaxed whitespace-pre-line">
-                {product.description}
-              </div>
+        {/* Recommendations */}
+        {recommendations.length > 0 && (
+          <section>
+            <h2
+              className="text-2xl font-bold tracking-tight mb-8"
+              style={{ fontFamily: 'Montserrat' }}
+            >
+              Gerelateerde producten
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {recommendations.slice(0, 4).map((p, i) => (
+                <ProductCard key={p.id} product={p} index={i} />
+              ))}
             </div>
-          )}
-
-          {/* Tags */}
-          {product.tags.length > 0 && (
-            <div className="mt-6 flex flex-wrap gap-2">
-              {product.tags
-                .filter((t) => !t.startsWith('DOEL-') && !t.startsWith('INGR-') && !t.startsWith('BEWUST-'))
-                .slice(0, 8)
-                .map((tag) => (
-                  <span
-                    key={tag}
-                    className="px-3 py-1 text-xs font-medium bg-black/5 rounded-full text-[var(--color-muted)]"
-                  >
-                    {tag}
-                  </span>
-                ))}
-            </div>
-          )}
-        </motion.div>
+          </section>
+        )}
       </div>
 
-      {/* Recommendations */}
-      {recommendations.length > 0 && (
-        <section>
-          <h2 className="text-2xl font-bold tracking-tight mb-8" style={{ fontFamily: 'Montserrat' }}>
-            Gerelateerde producten
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {recommendations.slice(0, 4).map((p, i) => (
-              <ProductCard key={p.id} product={p} index={i} />
-            ))}
-          </div>
-        </section>
-      )}
-    </div>
+      {/* Mobile sticky bottom bar */}
+      <AnimatePresence>
+        {showStickyBar && (
+          <motion.div
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="fixed bottom-0 left-0 right-0 z-40 lg:hidden"
+          >
+            <div className="glass border-t border-white/60 px-4 py-3 flex items-center gap-3 shadow-[0_-8px_24px_rgba(0,0,0,0.06)]">
+              <div className="flex-shrink-0 w-12 h-12 rounded-xl overflow-hidden bg-white border border-[var(--color-border)]">
+                <img
+                  src={product.images[0]?.url}
+                  alt=""
+                  className="w-full h-full object-contain p-1"
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-[var(--color-muted)] truncate">
+                  {product.vendor}
+                </p>
+                <p className="text-sm font-bold text-[var(--color-navy)]">
+                  {selectedVariant
+                    ? formatPrice(selectedVariant.price)
+                    : formatPrice(product.priceRange.minVariantPrice)}
+                </p>
+              </div>
+              <button
+                onClick={handleAddToCart}
+                disabled={isLoading || !inStock}
+                className={`h-11 px-5 rounded-full text-sm font-semibold flex items-center justify-center gap-2 ${
+                  inStock ? 'btn-primary' : 'bg-black/10 text-[var(--color-muted)]'
+                }`}
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : inStock ? (
+                  <>
+                    <ShoppingBag className="w-4 h-4" />
+                    Toevoegen
+                  </>
+                ) : (
+                  'Uitverkocht'
+                )}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

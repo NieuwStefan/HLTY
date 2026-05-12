@@ -3,7 +3,16 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, ShoppingBag, Menu, X, ChevronDown, ChevronRight, User } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { getMenu, menuItemToRoute, type MenuItem, type Menu as MenuType } from '../lib/shopify';
+import {
+  getMenu,
+  menuItemToRoute,
+  getAllBrands,
+  BRAND_CATEGORIES,
+  BRAND_CATEGORY_OTHER,
+  type MenuItem,
+  type Menu as MenuType,
+  type BrandSummary,
+} from '../lib/shopify';
 
 export default function Header() {
   const { cart, openCart } = useCart();
@@ -13,6 +22,7 @@ export default function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [menu, setMenu] = useState<MenuType | null>(null);
+  const [brands, setBrands] = useState<BrandSummary[]>([]);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
   const [mobileSubExpanded, setMobileSubExpanded] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -23,7 +33,25 @@ export default function Header() {
 
   useEffect(() => {
     getMenu('main-menu').then(setMenu).catch(console.error);
+    getAllBrands().then(setBrands).catch(console.error);
   }, []);
+
+  // Group brands by category for the dropdown.
+  const brandGroups = (() => {
+    const order = [
+      ...BRAND_CATEGORIES.map((c) => ({ key: c.key, label: c.label })),
+      BRAND_CATEGORY_OTHER,
+    ];
+    const map = new Map<string, { key: string; label: string; brands: BrandSummary[] }>();
+    for (const { key, label } of order) map.set(key, { key, label, brands: [] });
+    for (const b of brands) {
+      const g = map.get(b.categoryKey) ?? map.get(BRAND_CATEGORY_OTHER.key)!;
+      g.brands.push(b);
+    }
+    return [...map.values()].filter((g) => g.brands.length > 0);
+  })();
+
+  const isBrandsItem = (item: MenuItem) => item.title.trim().toLowerCase() === 'merken';
 
   // Close dropdown on route change
   useEffect(() => {
@@ -93,7 +121,23 @@ export default function Header() {
               <nav className="hidden lg:flex items-center gap-1">
                 {menu?.items.map((topItem) => (
                   <div key={topItem.id} className="relative">
-                    {hasChildren(topItem) ? (
+                    {isBrandsItem(topItem) ? (
+                      <button
+                        onClick={() => toggleDropdown(topItem.id)}
+                        className={`flex items-center gap-1 px-3 py-2 text-sm font-medium transition-colors rounded-full ${
+                          activeDropdown === topItem.id
+                            ? 'text-[var(--color-navy)] bg-black/5'
+                            : 'text-[var(--color-navy)]/80 hover:text-[var(--color-navy)] hover:bg-black/5'
+                        }`}
+                      >
+                        {topItem.title}
+                        <ChevronDown
+                          className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                            activeDropdown === topItem.id ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </button>
+                    ) : hasChildren(topItem) ? (
                       <button
                         onClick={() => toggleDropdown(topItem.id)}
                         className={`flex items-center gap-1 px-3 py-2 text-sm font-medium transition-colors rounded-full ${
@@ -117,9 +161,73 @@ export default function Header() {
                       </Link>
                     )}
 
+                    {/* Brands custom dropdown — same style as other dropdowns */}
+                    <AnimatePresence>
+                      {activeDropdown === topItem.id && isBrandsItem(topItem) && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 4 }}
+                          transition={{ duration: 0.2, ease: 'easeOut' }}
+                          className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-lg border border-gray-100 p-3 max-h-[70vh] overflow-y-auto z-50"
+                        >
+                          <div className="space-y-0.5">
+                            {brandGroups.map((group) => (
+                              <div key={group.key}>
+                                <button
+                                  onClick={() => toggleSub(group.key)}
+                                  className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 rounded-xl transition-colors"
+                                >
+                                  {group.label}
+                                  <ChevronDown
+                                    className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                                      expandedSub === group.key ? 'rotate-180' : ''
+                                    }`}
+                                  />
+                                </button>
+
+                                <AnimatePresence>
+                                  {expandedSub === group.key && (
+                                    <motion.div
+                                      initial={{ height: 0, opacity: 0 }}
+                                      animate={{ height: 'auto', opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      transition={{ duration: 0.2 }}
+                                      className="overflow-hidden"
+                                    >
+                                      <div className="ml-2 pb-1 space-y-0.5">
+                                        {group.brands.map((brand) => (
+                                          <Link
+                                            key={brand.handle}
+                                            to={`/merken/${brand.handle}`}
+                                            className="block px-3 py-1.5 text-sm text-[var(--color-navy)]/70 hover:text-[var(--color-navy)] hover:bg-[var(--color-primary)]/10 rounded-lg transition-colors"
+                                            onClick={() => {
+                                              setActiveDropdown(null);
+                                              setExpandedSub(null);
+                                            }}
+                                          >
+                                            {brand.name}
+                                          </Link>
+                                        ))}
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            ))}
+                          </div>
+                          {brands.length === 0 && (
+                            <div className="p-4 text-center text-sm text-[var(--color-muted)]">
+                              Merken laden…
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
                     {/* Dropdown for this specific item */}
                     <AnimatePresence>
-                      {activeDropdown === topItem.id && hasChildren(topItem) && (
+                      {activeDropdown === topItem.id && hasChildren(topItem) && !isBrandsItem(topItem) && (
                         <motion.div
                           initial={{ opacity: 0, y: 4 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -319,7 +427,77 @@ export default function Header() {
               <div className="space-y-1">
                 {menu?.items.map((topItem) => (
                   <div key={topItem.id}>
-                    {hasChildren(topItem) ? (
+                    {isBrandsItem(topItem) ? (
+                      <>
+                        <button
+                          onClick={() => {
+                            setMobileExpanded(mobileExpanded === topItem.id ? null : topItem.id);
+                            setMobileSubExpanded(null);
+                          }}
+                          className="w-full flex items-center justify-between px-3 py-3 text-sm font-semibold text-[var(--color-navy)] hover:bg-black/5 rounded-xl transition-colors"
+                        >
+                          {topItem.title}
+                          <ChevronDown
+                            className={`w-4 h-4 text-[var(--color-muted)] transition-transform ${
+                              mobileExpanded === topItem.id ? 'rotate-180' : ''
+                            }`}
+                          />
+                        </button>
+                        <AnimatePresence>
+                          {mobileExpanded === topItem.id && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden ml-2"
+                            >
+                              {brandGroups.map((group) => (
+                                <div key={group.key} className="mt-2">
+                                  <button
+                                    onClick={() =>
+                                      setMobileSubExpanded(
+                                        mobileSubExpanded === group.key ? null : group.key
+                                      )
+                                    }
+                                    className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 rounded-lg transition-colors"
+                                  >
+                                    {group.label}
+                                    <ChevronRight
+                                      className={`w-3.5 h-3.5 transition-transform ${
+                                        mobileSubExpanded === group.key ? 'rotate-90' : ''
+                                      }`}
+                                    />
+                                  </button>
+                                  <AnimatePresence>
+                                    {mobileSubExpanded === group.key && (
+                                      <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ duration: 0.15 }}
+                                        className="overflow-hidden ml-3"
+                                      >
+                                        {group.brands.map((b) => (
+                                          <Link
+                                            key={b.handle}
+                                            to={`/merken/${b.handle}`}
+                                            onClick={() => setMobileOpen(false)}
+                                            className="block px-3 py-2 text-sm text-[var(--color-navy)]/70 hover:text-[var(--color-navy)] hover:bg-[var(--color-primary)]/10 rounded-lg transition-colors"
+                                          >
+                                            {b.name}
+                                          </Link>
+                                        ))}
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                                </div>
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </>
+                    ) : hasChildren(topItem) ? (
                       <button
                         onClick={() => {
                           setMobileExpanded(mobileExpanded === topItem.id ? null : topItem.id);
@@ -345,7 +523,7 @@ export default function Header() {
                     )}
 
                     <AnimatePresence>
-                      {mobileExpanded === topItem.id && hasChildren(topItem) && (
+                      {mobileExpanded === topItem.id && hasChildren(topItem) && !isBrandsItem(topItem) && (
                         <motion.div
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: 'auto', opacity: 1 }}

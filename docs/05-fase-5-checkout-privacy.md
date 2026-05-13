@@ -1,10 +1,11 @@
-# Fase 5 — Checkout-privacy fix: cart-unbind + correcte Shopify-logout
+# Fase 5 — Checkout-privacy fix + UX-polishing voor accounts
 
-**Datum:** 13 mei 2026
-**Status:** ✅ Afgerond
+**Datum:** 13–14 mei 2026
+**Status:** ✅ Afgerond (Pad A); F6.1 admin-werk wacht op besluit
 **Doel:** een privacy-bug oplossen waarbij de Shopify-checkout van een
 uitgelogde gebruiker nog steeds de e-mail, naam en het adres van de
-vorige gebruiker toonde.
+vorige gebruiker toonde. Plus een serie UX-puntjes die tijdens de
+testrun naar voren kwamen.
 
 ---
 
@@ -189,14 +190,136 @@ debounce zodat niet elke `/account`-bezoek een redirect veroorzaakt.
 
 ---
 
-## 9. Volgende stap
+## 9. Pad A — UX-polishing na de testrun
+
+Stefan en ik hebben samen de testrun-bevindingen vertaald naar een
+concrete uitbreidings-stap die direct in deze fase is uitgevoerd. Dit
+zijn de items die op die scope zaten (volgorde van impact):
+
+### H5 — Onboarding-flow voor nieuwe accounts
+
+[src/pages/Welcome.tsx](../src/pages/Welcome.tsx) is nieuw. Een
+gloednieuw account dat door de OAuth-callback heen komt zonder
+firstName/lastName en zonder adresboek wordt nu **niet** naar
+`/account` gestuurd maar naar `/welkom` — een onboarding-scherm met
+twee cards: voornaam/achternaam (verplicht) en bezorgadres
+(optioneel). "Sla over"-link voor wie later wil. Submit gebruikt de
+bestaande `/api/customer/profile` + `/api/customer/address`-routes
+met `defaultAddress: true`.
+
+Wijziging in [src/pages/AuthCallback.tsx](../src/pages/AuthCallback.tsx):
+na de exchange probeert het `/api/customer/me` even op te halen. Bij
+detectie van een "verse" customer (geen naam, geen adresboek) gaat de
+browser door naar `/welkom`. Bij bestaande klanten verandert er
+niets.
+
+Telefoonnummer is bewust **niet** in de onboarding opgenomen — de
+Customer Account API laat dat niet via klant-zelf-edit toe (zie
+docs/04 § 3.1). Voor MKB-volume kan dat via de bestaande mailto-
+fallback. Een Admin-API wrapper hiervoor zit op de wishlist.
+
+### H2 — NAAM-card en h1 fresh-customer-greeting
+
+[src/pages/Account.tsx](../src/pages/Account.tsx) `OverviewTab`
+gebruikte tot nu `customer.displayName`. Shopify zet `displayName` op
+het e-mailadres voor accounts zonder firstName, waardoor de NAAM-card
+het hele e-mailadres als naam toonde. Vervangen door
+`[firstName, lastName].filter(Boolean).join(' ') || '—'`.
+
+De Dashboard h1 is ook dynamisch: bij een "fresh" account (geen
+naam, geen adresboek) wordt nu "Welkom bij HLTY!" getoond i.p.v.
+"Welkom terug" — relevant voor wie de onboarding-flow heeft
+overgeslagen.
+
+### M4 — Loading-state op de Uitlog-knop
+
+Tussen klik op Uitloggen en de redirect zit een async stap (cart
+unbind, ~500–1500 ms). Tot nu was er geen feedback. Knop is nu
+disabled met een spinner en label "Uitloggen...". onLogout type
+bijgewerkt naar `() => Promise<void>`.
+
+### H3 + H4 — Sessie-mismatch en switch-user
+
+Twee gerelateerde verbeteringen voor de `LoginPrompt`-staat:
+
+- **H4 (`?force=1` op `/api/auth/start`)**: een nieuwe query-param
+  voegt OIDC `prompt=login` toe aan de OAuth-URL. Daardoor toont
+  Shopify altijd opnieuw het e-mailformulier i.p.v. de auto-login
+  via z'n customer-account-cookies. `CustomerContext.login()` heeft
+  een nieuwe `force?: boolean`-parameter. De LoginPrompt-component
+  toont een kleine link "Inloggen met een ander account" die dit
+  triggert.
+- **H3 (auto-trigger via referrer)**: bij mount van LoginPrompt
+  controleert een `useEffect` of `document.referrer` op
+  `checkout.hlty.shop` of `inlog.hlty.shop` matched. Zo ja → meteen
+  `onLogin()` aanroepen. Een gebruiker die net via de checkout-
+  Inloggen-link is geweest hoeft op `/account` geen extra klik te
+  doen.
+
+### M2 — Cart leegmaken bij account-wissel (geparkeerd)
+
+Niet uitgevoerd. De huidige cart-unbind (uit § 4) houdt items
+behouden bij logout en de nieuwe cart heeft geen klant-binding. Een
+extra cart-wipe bij account-wissel was overwogen, maar voor het
+MKB-volume voegt het meer verwarring (waar zijn mijn items?) dan
+veiligheid toe. Op de wishlist.
+
+### F6.1 — HLTY-logo op de Shopify-checkout
+
+Tijdens de testrun viel op dat het logo op de Shopify-checkout naar
+de oude Horizon-thema landingpage linkt (in plaats van naar de
+React-app op www.hlty.shop). Onderzoek in de admin:
+
+- Het primair domein voor "Webshop" in Shopify is
+  `checkout.hlty.shop`. Het checkout-logo wijst automatisch naar
+  `https://checkout.hlty.shop/` (root) — dat serveert de Horizon-
+  thema (de "oude website").
+- Zowel `hlty.shop` als `www.hlty.shop` wijzen DNS-technisch naar
+  Vercel (de React-app). Shopify markeert beide als "Ongeldige DNS"
+  en staat ze niet als primair toe.
+
+Drie opties (status: wacht op besluit):
+
+- **A.** Status quo. Geen werk, logo blijft niet-ideaal.
+- **B.** Een JS-redirect in Horizon `theme.liquid`:
+  ```html
+  <script>
+    if (location.hostname === 'checkout.hlty.shop') {
+      location.replace('https://www.hlty.shop' + location.pathname + location.search);
+    }
+  </script>
+  ```
+  Effect: elke bezoek aan `checkout.hlty.shop/` (online-store
+  routes) wordt door de browser doorgestuurd naar www.hlty.shop.
+  De checkout-pages onder `/checkouts/cn/...` gebruiken hun eigen
+  layout en blijven werken. Veiligste fix, blijft binnen Shopify-
+  admin.
+- **C.** Unpublish het Horizon-thema. Bezoekers krijgen Shopify's
+  standaard "Site under construction"-page. Slechtere landing-UX.
+
+---
+
+## 10. Commits Pad A
+
+| Commit | Onderwerp |
+|--------|-----------|
+| `9e75fd8` | Pad A: H5 (Welcome.tsx + route + AuthCallback redirect), H2 (NAAM-card + h1 fresh greeting), M4 (Uitlog spinner), H3+H4 (force-param + switch-user link + referrer auto-trigger) |
+| `d1b03d1` | Fase 5 oorspronkelijke verslag (deze file) |
+
+---
+
+## 11. Volgende stap
 
 Klein:
-- Verbeterpunten § 6.1 (nieuwe-gebruiker UX) — quick wins, ~1u totaal
-- Verbeterpunten § 6.2 (silent OAuth bij /account) — 1-2u
+- F6.1 besluit (A/B/C) — als B: implementeren via Theme Code Editor
+- M2 (cart leegmaken bij account-wissel) — als de feedback toch nog komt
+- /welkom volledige runtime-test met een vers account (technisch
+  bevestigd, mist alleen end-to-end visuele check)
 
 Groot, zoals genoteerd in [04-fase-4-profile-edit.md § 9](./04-fase-4-profile-edit.md#9-volgende-stap-fase-5):
-- E-mail/telefoon wijzigen via Admin API wrapper (oorspronkelijke Fase 5 onderwerp)
-- Playwright e2e test-suite — vooral relevant nu auth-flow complex is geworden
+- E-mail/telefoon wijzigen via Admin API wrapper — oorspronkelijke
+  Fase 5 onderwerp dat naar een latere fase is geschoven
+- Playwright e2e test-suite — vooral relevant nu de auth-flow met
+  onboarding, switch-user en silent OAuth complex is geworden
 - Optimistic updates in adresboek
 - Nieuwsbrief opt-in via `customerEmailMarketingSubscribe`

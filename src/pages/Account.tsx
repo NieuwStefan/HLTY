@@ -569,9 +569,11 @@ function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => voi
 }
 
 function ProfileTab({ customer }: { customer: Customer | null }) {
-  if (!customer) return null;
+  console.log('[ProfileTab] render — customer:', customer);
+  if (!customer) return <div style={{ padding: 40, textAlign: 'center', color: 'red' }}>NO_CUSTOMER</div>;
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="profile-tab-root">
+      <div style={{ padding: 8, background: 'yellow', color: 'black' }}>FASE4_MARKER</div>
       <PersonalInfoCard customer={customer} />
       <AddressBookCard customer={customer} />
     </div>

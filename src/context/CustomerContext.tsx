@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { COOKIES, type SessionCookie } from '../lib/customer-auth-shared';
+import { unbindStoredCart } from '../lib/cart-storage';
 
 export interface CustomerAddress {
   id: string;
@@ -47,7 +48,7 @@ interface CustomerContextType {
   // Triggers the OAuth redirect. `returnTo` is where to send the user
   // after successful login. Defaults to the current pathname.
   login: (returnTo?: string) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   // Force-refresh the customer profile from the API.
   refresh: () => Promise<void>;
 }
@@ -132,7 +133,18 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     window.location.href = `/api/auth/start?return_to=${encodeURIComponent(target)}`;
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    // Drop Shopify's server-side customer-binding on the cart before
+    // navigating away. Items stay (cart is re-created with same lines)
+    // but the next visitor on this device won't see the previous user's
+    // data on the Shopify checkout page.
+    try {
+      await unbindStoredCart();
+    } catch {
+      // Don't block logout on unbind failure — the auth cookies still
+      // get cleared on the next request, which is the primary safety
+      // mechanism.
+    }
     window.location.href = '/api/auth/logout';
   }, []);
 

@@ -66,6 +66,11 @@ export interface Cart {
     totalAmount: Money;
     subtotalAmount: Money;
   };
+  buyerIdentity?: {
+    email: string | null;
+    phone: string | null;
+    customer: { id: string } | null;
+  };
 }
 
 export interface MenuItem {
@@ -235,6 +240,11 @@ const CART_FRAGMENT = `
     cost {
       totalAmount { amount currencyCode }
       subtotalAmount { amount currencyCode }
+    }
+    buyerIdentity {
+      email
+      phone
+      customer { id }
     }
   }
 `;
@@ -658,6 +668,43 @@ export async function getCart(cartId: string): Promise<Cart | null> {
 
   if (!data.cart) return null;
   return { ...data.cart, lines: reshapeCartLines(data.cart.lines) };
+}
+
+// True when the cart is server-side linked to a customer account at
+// Shopify (set automatically after the buyer first reaches checkout
+// while logged in). Such carts cause checkout pre-fill to leak the
+// original buyer's data to whoever loads the cart afterwards.
+export function cartHasCustomerBinding(cart: Cart): boolean {
+  const bi = cart.buyerIdentity;
+  if (!bi) return false;
+  return !!(bi.email || bi.phone || bi.customer?.id);
+}
+
+// Creates a fresh cart that mirrors the line items of an existing cart
+// but carries no buyer identity. Used to drop the customer-binding when
+// the user logs out or when an anonymous session loads a previously
+// bound cart.
+export async function recreateCart(oldCartId: string): Promise<Cart | null> {
+  const oldCart = await getCart(oldCartId);
+  if (!oldCart || oldCart.lines.length === 0) return null;
+
+  const lines = oldCart.lines.map((line) => ({
+    merchandiseId: line.merchandise.id,
+    quantity: line.quantity,
+  }));
+
+  const data = await shopifyFetch<any>(
+    `${CART_FRAGMENT}
+    mutation CartRecreate($input: CartInput!) {
+      cartCreate(input: $input) {
+        cart { ...CartFields }
+      }
+    }`,
+    { input: { lines, buyerIdentity: { countryCode: 'NL' } } },
+  );
+
+  const cart = data.cartCreate.cart;
+  return { ...cart, lines: reshapeCartLines(cart.lines) };
 }
 
 // ---------- Menu Queries ----------

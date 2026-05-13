@@ -6,7 +6,11 @@ import {
   updateCartLine as updateCartLineApi,
   removeCartLine as removeCartLineApi,
   getCart,
+  recreateCart,
+  cartHasCustomerBinding,
 } from '../lib/shopify';
+import { CART_ID_KEY } from '../lib/cart-storage';
+import { COOKIES } from '../lib/customer-auth-shared';
 
 interface CartContextType {
   cart: Cart | null;
@@ -21,27 +25,57 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | null>(null);
 
-const CART_ID_KEY = 'hlty-cart-id';
+function hasSessionCookie(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.cookie.split('; ').some((c) => c.startsWith(`${COOKIES.session}=`));
+}
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<Cart | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Restore cart from localStorage on mount
+  // Restore cart from localStorage on mount. If the visitor is not
+  // logged in but the stored cart still carries a customer-binding from
+  // an earlier session, re-create the cart to drop that binding before
+  // exposing it to this anonymous view (prevents checkout pre-fill of
+  // the previous buyer's data — see docs/05).
   useEffect(() => {
     const cartId = localStorage.getItem(CART_ID_KEY);
-    if (cartId) {
-      getCart(cartId).then((existingCart) => {
-        if (existingCart && existingCart.lines.length > 0) {
-          setCart(existingCart);
-        } else {
+    if (!cartId) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const existing = await getCart(cartId);
+        if (cancelled) return;
+
+        if (!existing || existing.lines.length === 0) {
           localStorage.removeItem(CART_ID_KEY);
+          return;
         }
-      }).catch(() => {
-        localStorage.removeItem(CART_ID_KEY);
-      });
-    }
+
+        if (!hasSessionCookie() && cartHasCustomerBinding(existing)) {
+          const unbound = await recreateCart(cartId);
+          if (cancelled) return;
+          if (unbound) {
+            localStorage.setItem(CART_ID_KEY, unbound.id);
+            setCart(unbound);
+          } else {
+            localStorage.removeItem(CART_ID_KEY);
+          }
+          return;
+        }
+
+        setCart(existing);
+      } catch {
+        if (!cancelled) localStorage.removeItem(CART_ID_KEY);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const saveCart = useCallback((newCart: Cart) => {

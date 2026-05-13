@@ -10,7 +10,7 @@ besloten, wat is gedaan en waarom.
 |---|---------|-----------|--------|
 | 01 | [01-fase-1-foundation.md](./01-fase-1-foundation.md) | Fase 1 — Shopify-foundation: Headless-app, OAuth-client, branding, checkout op eigen subdomein | ✅ afgerond |
 | 02 | [02-fase-2-auth.md](./02-fase-2-auth.md) | Fase 2 — OAuth-login + eigen account-dashboard in code | ✅ afgerond |
-| 03 | _nog te schrijven_ | Fase 3 — Cart-binding + checkout finishing (bedankt-pagina, profile-edit) | 🔜 |
+| 03 | [03-fase-3-checkout-finishing.md](./03-fase-3-checkout-finishing.md) | Fase 3 — Checkout pre-fill + order-detail-modal + re-order | ✅ afgerond |
 
 ## Conventies voor verslagen
 

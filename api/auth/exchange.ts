@@ -17,7 +17,7 @@ import {
   buildAuthCookies,
   type VercelReq,
   type VercelRes,
-} from '../_auth-helpers';
+} from '../_auth-helpers.js';
 
 interface Body {
   code?: string;

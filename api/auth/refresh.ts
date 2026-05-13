@@ -16,7 +16,7 @@ import {
   clearCookie,
   type VercelReq,
   type VercelRes,
-} from '../_auth-helpers';
+} from '../_auth-helpers.js';
 
 export default async function handler(req: VercelReq, res: VercelRes) {
   if (req.method !== 'POST') {

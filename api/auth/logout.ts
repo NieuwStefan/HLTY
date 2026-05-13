@@ -11,7 +11,7 @@ import {
   parseCookies,
   type VercelReq,
   type VercelRes,
-} from '../_auth-helpers';
+} from '../_auth-helpers.js';
 
 export default function handler(req: VercelReq, res: VercelRes) {
   if (req.method !== 'GET') {

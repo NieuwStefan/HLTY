@@ -11,7 +11,7 @@ import {
   clearCookie,
   type VercelReq,
   type VercelRes,
-} from '../_auth-helpers';
+} from '../_auth-helpers.js';
 
 const QUERY = `
   query Orders($first: Int!) {

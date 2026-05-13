@@ -1,7 +1,8 @@
 // GET /api/customer/me
 //
 // Returns the logged-in customer's profile (name, email, phone,
-// default address) by querying the Customer Account API GraphQL endpoint.
+// default address, and address book) by querying the Customer Account
+// API GraphQL endpoint.
 //
 // Auto-refreshes the access token on 401. Returns 401 to the client if
 // not logged in.
@@ -27,12 +28,33 @@ const QUERY = `
       emailAddress { emailAddress }
       phoneNumber { phoneNumber }
       defaultAddress {
+        id
         address1
         address2
         city
         zip
         country
         formatted
+      }
+      addresses(first: 20, skipDefault: false) {
+        edges {
+          node {
+            id
+            firstName
+            lastName
+            company
+            address1
+            address2
+            city
+            zip
+            province
+            zoneCode
+            country
+            territoryCode
+            phoneNumber
+            formatted
+          }
+        }
       }
     }
   }
@@ -53,8 +75,6 @@ export default async function handler(req: VercelReq, res: VercelRes) {
     return;
   }
 
-  // Try with the current access token first. If it's expired or missing,
-  // attempt one refresh and retry.
   let response = accessToken ? await callGraphql(accessToken, QUERY) : null;
   let setCookies: string[] = [];
 
@@ -108,8 +128,6 @@ function callGraphql(accessToken: string, query: string): Promise<Response> {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      // Customer Account API expects the raw shcat_-prefixed token in
-      // the Authorization header (no "Bearer " prefix).
       Authorization: accessToken,
     },
     body: JSON.stringify({ query }),

@@ -108,7 +108,9 @@ function callGraphql(accessToken: string, query: string): Promise<Response> {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
+      // Customer Account API expects the raw shcat_-prefixed token in
+      // the Authorization header (no "Bearer " prefix).
+      Authorization: accessToken,
     },
     body: JSON.stringify({ query }),
   });

@@ -118,7 +118,9 @@ function graphql(accessToken: string, query: string, variables: Record<string, u
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
+      // Customer Account API expects the raw shcat_-prefixed token in
+      // the Authorization header (no "Bearer " prefix).
+      Authorization: accessToken,
     },
     body: JSON.stringify({ query, variables }),
   });

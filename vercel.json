@@ -1,5 +1,8 @@
 {
   "rewrites": [
+    { "source": "/cart/:path*", "destination": "https://8crbbh-zu.myshopify.com/cart/:path*" },
+    { "source": "/checkouts/:path*", "destination": "https://8crbbh-zu.myshopify.com/checkouts/:path*" },
+    { "source": "/services/:path*", "destination": "https://8crbbh-zu.myshopify.com/services/:path*" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

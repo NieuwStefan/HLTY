@@ -1,7 +1,7 @@
 # Fase 5 — Checkout-privacy fix + UX-polishing voor accounts
 
 **Datum:** 13–14 mei 2026
-**Status:** ✅ Afgerond (Pad A); F6.1 admin-werk wacht op besluit
+**Status:** ✅ Afgerond — Pad A code-items + F6.1 (Horizon theme.liquid redirect)
 **Doel:** een privacy-bug oplossen waarbij de Shopify-checkout van een
 uitgelogde gebruiker nog steeds de e-mail, naam en het adres van de
 vorige gebruiker toonde. Plus een serie UX-puntjes die tijdens de
@@ -264,7 +264,7 @@ extra cart-wipe bij account-wissel was overwogen, maar voor het
 MKB-volume voegt het meer verwarring (waar zijn mijn items?) dan
 veiligheid toe. Op de wishlist.
 
-### F6.1 — HLTY-logo op de Shopify-checkout
+### F6.1 — HLTY-logo op de Shopify-checkout (✅ opgelost via optie B)
 
 Tijdens de testrun viel op dat het logo op de Shopify-checkout naar
 de oude Horizon-thema landingpage linkt (in plaats van naar de
@@ -276,26 +276,46 @@ React-app op www.hlty.shop). Onderzoek in de admin:
   thema (de "oude website").
 - Zowel `hlty.shop` als `www.hlty.shop` wijzen DNS-technisch naar
   Vercel (de React-app). Shopify markeert beide als "Ongeldige DNS"
-  en staat ze niet als primair toe.
+  en staat ze niet als primair toe. De normale weg ("Maak primair")
+  is dus afgesloten.
 
-Drie opties (status: wacht op besluit):
+**Toegepaste oplossing:** een korte JS-redirect bovenin
+`layout/theme.liquid` van het Horizon-thema:
 
-- **A.** Status quo. Geen werk, logo blijft niet-ideaal.
-- **B.** Een JS-redirect in Horizon `theme.liquid`:
-  ```html
+```html
+<head>
+  {%- comment -%} F6.1: HLTY-logo op de Shopify-checkout leidt
+  standaard naar deze (oude) Horizon-thema homepage op
+  checkout.hlty.shop/. Stuur die bezoekers door naar de echte
+  React-app op www.hlty.shop. Alleen actief op het checkout-
+  subdomein; de /checkouts/cn/... pages gebruiken hun eigen layout
+  en blijven dus werken. Zie docs/05 § 9 F6.1. {%- endcomment -%}
   <script>
-    if (location.hostname === 'checkout.hlty.shop') {
-      location.replace('https://www.hlty.shop' + location.pathname + location.search);
+    if (window.location.hostname === 'checkout.hlty.shop') {
+      window.location.replace('https://www.hlty.shop' + window.location.pathname + window.location.search);
     }
   </script>
-  ```
-  Effect: elke bezoek aan `checkout.hlty.shop/` (online-store
-  routes) wordt door de browser doorgestuurd naar www.hlty.shop.
-  De checkout-pages onder `/checkouts/cn/...` gebruiken hun eigen
-  layout en blijven werken. Veiligste fix, blijft binnen Shopify-
-  admin.
-- **C.** Unpublish het Horizon-thema. Bezoekers krijgen Shopify's
-  standaard "Site under construction"-page. Slechtere landing-UX.
+  ...
+```
+
+Live-test bevestigd: `https://checkout.hlty.shop/` (de URL waar het
+logo naar wijst) redirect onmiddellijk naar `https://www.hlty.shop/`.
+De Shopify-checkout-pagina's onder `/checkouts/cn/...` gebruiken een
+aparte renderer (geen theme.liquid) en zijn dus niet beïnvloed.
+
+**Waarschuwing voor toekomst:** dit is een wijziging in de
+Horizon-thema code, niet in de repo. Een **thema-update of een
+fresh thema-installatie zal de wijziging overschrijven** — dan
+opnieuw plaatsen. Mogelijk is dit op de wishlist te verplaatsen
+naar een nettere oplossing (custom checkout-extension op Plus, of
+DNS-herstructuring).
+
+Alternatieven die zijn overwogen:
+
+- **A. Status quo.** Geen werk, logo blijft naar Horizon linken.
+- **C. Unpublish het Horizon-thema.** Schoner maar geeft een
+  "Site under construction"-landing en heeft potentieel
+  cascade-effecten op andere Shopify-functies.
 
 ---
 
@@ -311,10 +331,12 @@ Drie opties (status: wacht op besluit):
 ## 11. Volgende stap
 
 Klein:
-- F6.1 besluit (A/B/C) — als B: implementeren via Theme Code Editor
 - M2 (cart leegmaken bij account-wissel) — als de feedback toch nog komt
 - /welkom volledige runtime-test met een vers account (technisch
   bevestigd, mist alleen end-to-end visuele check)
+- Bewaak de F6.1 redirect bij toekomstige Horizon-thema-updates: de
+  wijziging in `layout/theme.liquid` zit niet in de repo en kan
+  worden overschreven
 
 Groot, zoals genoteerd in [04-fase-4-profile-edit.md § 9](./04-fase-4-profile-edit.md#9-volgende-stap-fase-5):
 - E-mail/telefoon wijzigen via Admin API wrapper — oorspronkelijke

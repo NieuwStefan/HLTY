@@ -70,7 +70,13 @@ type Tab = 'overview' | 'orders' | 'profile';
 export default function Account() {
   const { isLoggedIn, customer, isLoading, error, login, logout } = useCustomer();
 
-  if (!isLoggedIn) return <LoginPrompt onLogin={() => login('/account')} />;
+  if (!isLoggedIn)
+    return (
+      <LoginPrompt
+        onLogin={() => login('/account')}
+        onSwitchUser={() => login('/account', true)}
+      />
+    );
   if (isLoading && !customer) return <FullPageLoader />;
 
   return <Dashboard customer={customer} error={error} onLogout={logout} />;
@@ -78,7 +84,26 @@ export default function Account() {
 
 // ---------- Login Prompt ----------
 
-function LoginPrompt({ onLogin }: { onLogin: () => void }) {
+function LoginPrompt({
+  onLogin,
+  onSwitchUser,
+}: {
+  onLogin: () => void;
+  onSwitchUser: () => void;
+}) {
+  // Wanneer de bezoeker net terugkomt van de Shopify-checkout — waar
+  // hij mogelijk op "Inloggen" heeft geklikt en daar wel z'n Shopify-
+  // session heeft, maar geen hlty_session bij ons — dan ergeren we hem
+  // niet met de losse "Inloggen / Registreren"-knop. Eén stap aan onze
+  // kant: meteen onze OAuth-flow starten. Shopify herkent de actieve
+  // sessie → 1-staps terug. Zo niet → normale mailcode-flow.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const ref = document.referrer;
+    const fromShopify = /^https:\/\/(checkout|inlog)\.hlty\.shop/.test(ref);
+    if (fromShopify) onLogin();
+  }, [onLogin]);
+
   return (
     <div className="mx-auto max-w-[480px] px-4">
       <div className="text-center mb-8">
@@ -96,6 +121,13 @@ function LoginPrompt({ onLogin }: { onLogin: () => void }) {
       <div className="card p-8 text-center">
         <button onClick={onLogin} className="btn-primary w-full py-4 text-sm gap-2">
           Inloggen / Registreren
+        </button>
+
+        <button
+          onClick={onSwitchUser}
+          className="mt-3 text-xs font-medium text-[var(--color-muted)] hover:text-[var(--color-navy)] underline-offset-4 hover:underline"
+        >
+          Inloggen met een ander account
         </button>
 
         <div className="mt-5 flex items-start gap-2 text-left">
@@ -129,9 +161,34 @@ function Dashboard({
 }: {
   customer: ReturnType<typeof useCustomer>['customer'];
   error: string | null;
-  onLogout: () => void;
+  onLogout: () => Promise<void>;
 }) {
   const [tab, setTab] = useState<Tab>('overview');
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  // "Echt nieuw" = nooit een profiel ingevuld, geen adresboek. Voor die
+  // klanten is "Welkom terug" misleidend — een eerste-bezoek-tekst is
+  // beter. Klanten die al ooit iets hebben ingevuld krijgen de
+  // bekende terugkomst-begroeting.
+  const isFreshCustomer =
+    !!customer &&
+    !customer.firstName &&
+    !customer.lastName &&
+    customer.addresses.edges.length === 0;
+  const greeting = isFreshCustomer
+    ? 'Welkom bij HLTY!'
+    : customer?.firstName
+    ? `Welkom terug, ${customer.firstName}`
+    : 'Welkom terug';
+
+  async function handleLogout() {
+    setLoggingOut(true);
+    try {
+      await onLogout();
+    } catch {
+      setLoggingOut(false);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-[820px] px-4">
@@ -145,7 +202,7 @@ function Dashboard({
           <CheckCircle2 className="w-8 h-8 text-green-500" />
         </motion.div>
         <h1 className="text-3xl font-extrabold text-[var(--color-navy)]" style={{ fontFamily: 'Montserrat' }}>
-          {customer?.firstName ? `Welkom terug, ${customer.firstName}` : 'Welkom terug'}
+          {greeting}
         </h1>
         <p className="text-sm text-[var(--color-muted)] mt-2">
           Beheer je account en bestellingen
@@ -185,9 +242,13 @@ function Dashboard({
       </AnimatePresence>
 
       <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-        <button onClick={onLogout} className="btn-secondary py-3 px-6 gap-2 text-sm">
-          <LogOut className="w-4 h-4" />
-          Uitloggen
+        <button
+          onClick={handleLogout}
+          disabled={loggingOut}
+          className="btn-secondary py-3 px-6 gap-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {loggingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+          {loggingOut ? 'Uitloggen...' : 'Uitloggen'}
         </button>
         <Link
           to="/"
@@ -228,12 +289,16 @@ function TabButton({
 
 function OverviewTab({ customer }: { customer: ReturnType<typeof useCustomer>['customer'] }) {
   if (!customer) return null;
+  // Shopify zet `displayName` op het e-mailadres als er nog geen
+  // firstName/lastName is. Dat ziet er raar uit in de "Naam"-card,
+  // dus we negeren displayName en bouwen de naam zelf op.
+  const fullName = [customer.firstName, customer.lastName].filter(Boolean).join(' ');
   return (
     <div className="space-y-3">
       <InfoCard
         icon={<User className="w-5 h-5 text-[var(--color-primary)]" />}
         label="Naam"
-        value={customer.displayName || `${customer.firstName} ${customer.lastName}`.trim() || '—'}
+        value={fullName || '—'}
       />
       <InfoCard
         icon={<Mail className="w-5 h-5 text-[var(--color-primary)]" />}

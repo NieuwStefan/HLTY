@@ -7,6 +7,9 @@
 // Query params:
 //   return_to: optional path on www.hlty.shop to send the user to after
 //              login completes. Defaults to "/account".
+//   force:     "1" to force Shopify's account-picker (OIDC prompt=login)
+//              even if a customer-account-session is active. Used by the
+//              "Inloggen met een ander account" link.
 
 import {
   CUSTOMER_AUTH,
@@ -47,6 +50,12 @@ export default function handler(req: VercelReq, res: VercelRes) {
   authorizeUrl.searchParams.set('state', fullState);
   authorizeUrl.searchParams.set('code_challenge', challenge);
   authorizeUrl.searchParams.set('code_challenge_method', 'S256');
+  if (readForce(req.query?.force)) {
+    // OIDC-spec: forceer Shopify om opnieuw te authenticeren ook al is
+    // er een actieve sessie. Gebruiker krijgt zo de e-mail/code-prompt
+    // i.p.v. de auto-login flow.
+    authorizeUrl.searchParams.set('prompt', 'login');
+  }
 
   res.setHeader('Set-Cookie', cookies);
   res.setHeader('Location', authorizeUrl.toString());
@@ -60,4 +69,9 @@ function sanitizeReturnTo(input: string | string[] | undefined): string {
   // or http:// would be an open-redirect vector.
   if (!raw.startsWith('/') || raw.startsWith('//')) return '/account';
   return raw;
+}
+
+function readForce(input: string | string[] | undefined): boolean {
+  const raw = Array.isArray(input) ? input[0] : input;
+  return raw === '1' || raw === 'true';
 }

@@ -47,7 +47,10 @@ interface CustomerContextType {
   isLoggedIn: boolean;
   // Triggers the OAuth redirect. `returnTo` is where to send the user
   // after successful login. Defaults to the current pathname.
-  login: (returnTo?: string) => void;
+  // `force` adds OIDC prompt=login so Shopify always shows the email
+  // form, even if a customer-account-session is still active. Use this
+  // for "switch user" flows.
+  login: (returnTo?: string, force?: boolean) => void;
   logout: () => Promise<void>;
   // Force-refresh the customer profile from the API.
   refresh: () => Promise<void>;
@@ -128,9 +131,11 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('focus', onFocus);
   }, []);
 
-  const login = useCallback((returnTo?: string) => {
+  const login = useCallback((returnTo?: string, force?: boolean) => {
     const target = returnTo ?? window.location.pathname + window.location.search;
-    window.location.href = `/api/auth/start?return_to=${encodeURIComponent(target)}`;
+    const params = new URLSearchParams({ return_to: target });
+    if (force) params.set('force', '1');
+    window.location.href = `/api/auth/start?${params.toString()}`;
   }, []);
 
   const logout = useCallback(async () => {

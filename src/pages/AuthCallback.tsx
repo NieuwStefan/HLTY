@@ -41,9 +41,38 @@ export default function AuthCallback() {
           throw new Error(body?.error ?? `Exchange failed (${res.status})`);
         }
         const data = (await res.json()) as { returnTo?: string };
+        const fallback = data.returnTo ?? '/account';
+
+        // Determine the landing page: fresh accounts go through the
+        // onboarding screen at /welkom so the first checkout has a name
+        // and address ready. Existing customers keep their original
+        // returnTo behavior.
+        let target = fallback;
+        if (fallback === '/account' || fallback === '/' || fallback === '') {
+          try {
+            const meRes = await fetch('/api/customer/me', { credentials: 'same-origin' });
+            if (meRes.ok) {
+              const me = (await meRes.json()) as {
+                firstName?: string | null;
+                lastName?: string | null;
+                addresses?: { edges: unknown[] };
+              } | null;
+              const isFresh =
+                !!me &&
+                !me.firstName &&
+                !me.lastName &&
+                (!me.addresses?.edges || me.addresses.edges.length === 0);
+              if (isFresh) target = '/welkom';
+            }
+          } catch {
+            // If the /me probe fails just fall through to the default
+            // returnTo — onboarding is non-critical.
+          }
+        }
+
         if (!cancelled) {
           // Hard reload so CustomerProvider picks up the new session cookie.
-          window.location.replace(data.returnTo ?? '/account');
+          window.location.replace(target);
         }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Inloggen mislukt');

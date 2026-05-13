@@ -1,12 +1,4 @@
 {
-  "redirects": [
-    {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "www.hlty.shop" }],
-      "destination": "https://hlty.shop/:path*",
-      "permanent": true
-    }
-  ],
   "rewrites": [
     { "source": "/cart/:path*", "destination": "https://8crbbh-zu.myshopify.com/cart/:path*" },
     { "source": "/checkouts/:path*", "destination": "https://8crbbh-zu.myshopify.com/checkouts/:path*" },

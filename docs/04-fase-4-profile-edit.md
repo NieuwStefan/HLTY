@@ -1,275 +1,298 @@
 # Fase 4 — Eigen profile-edit UI in dashboard
 
-**Datum:** te starten
-**Status:** 🔜 te doen
-**Doel:** De Profiel-tab in `/account` van link-naar-Shopify ombouwen naar
-een volledig **eigen UI** waarmee de klant naam, telefoon en adressen
-beheert zonder de site te verlaten. Dit is **"Optie A"** zoals besproken
-in de overgang vanuit Fase 3.
+**Datum:** 13 mei 2026
+**Status:** ✅ Afgerond
+**Doel:** De Profiel-tab in `/account` van een link-naar-Shopify ombouwen
+naar een volwaardig eigen profielbeheer-blok ("Optie A" uit Fase 3).
 
 ---
 
-## 1. Doel & scope (= Optie A)
+## 1. Doel & scope
 
-Wat de klant nu ziet onder de Profiel-tab:
+De Profiel-tab toonde tot voor deze fase alleen:
 
 > Wijzigingen aan je profiel kun je doorvoeren via je Shopify klantaccount.
 > [ Profiel bewerken bij Shopify ]
 
-Dat moet vervangen worden door een volwaardig profielbeheer-blok binnen
-het dashboard zelf:
+Doel was een volledige in-dashboard editor met:
 
-1. **Persoonsgegevens**
-   - Voornaam, achternaam — bewerkbaar
-   - E-mailadres — bewerkbaar (Shopify verstuurt een verificatie-mail)
-   - Telefoonnummer — bewerkbaar (E.164 format)
-2. **Adresboek**
-   - Lijst van alle adressen (uit `customer.addresses`)
-   - Per adres: Bewerken / Verwijderen / "Maak standaard"
-   - Knop "Adres toevoegen"
-   - Formulier met land/straatnaam/huisnummer/postcode/stad/telefoon
+1. **Persoonsgegevens-card** — voornaam, achternaam bewerkbaar; e-mail en
+   telefoon zichtbaar maar niet bewerkbaar (zie § 3.1).
+2. **Adresboek-card** — alle adressen tonen, toevoegen, bewerken,
+   verwijderen, standaard wisselen.
 
-**Niet in scope (kan later):**
-- Wachtwoord/2FA-instellingen (Shopify regelt de auth zelf, dat doen wij niet)
-- Voorkeuren / nieuwsbrief-checkbox (apart blokje, voor later)
-- Privacy / account-verwijderen knop (GDPR — apart, voor later)
+Niet in scope: wachtwoord/2FA, nieuwsbrief-voorkeur, account-verwijderen.
 
 ---
 
 ## 2. Initial state
 
-Dit is klaar uit Fase 1–3:
-- Customer Account API OAuth-flow werkt (alle tokens in HTTP-only cookies)
-- `/api/customer/me` geeft profiel terug
-- `/api/customer/orders` geeft orders terug
-- `useCustomer()` context laadt klantdata
-- Dashboard met tabs Overzicht / Bestellingen / Profiel
-- Branding (Montserrat / Maven Pro / mint / navy) consistent
-- Helper [src/lib/customer-auth-shared.ts](../src/lib/customer-auth-shared.ts) bevat cookie-namen
-- Helper [api/_auth-helpers.ts](../api/_auth-helpers.ts) bevat token-refresh logica
+Klaar uit Fase 1–3:
+- Customer Account API OAuth-flow met `shcat_` tokens in HTTP-only cookies
+- `/api/customer/me` voor profiel, `/api/customer/orders` voor orders
+- `useCustomer()` context met session + customer state
+- Branding consistent (Montserrat / Maven Pro / mint / navy)
 
-Wat er nog niet is:
+Nog niet aanwezig:
 - GraphQL mutations richting Customer Account API
-- Form-components in de codebase (zou simpel kunnen blijven, geen library)
+- Form-components / validators
+- Klantadresboek in de client-state
 
 ---
 
-## 3. Architectuur
+## 3. Beslissingen
+
+### 3.1 E-mail en telefoon niet wijzigbaar via API
+
+Introspectie wees uit dat `CustomerUpdateInput` op de Customer Account API
+**alleen** `firstName` en `lastName` accepteert. Er is geen
+`customerEmailUpdate` of `customerPhoneUpdate` mutation — alleen
+`customerEmailMarketingSubscribe/Unsubscribe`. Email en telefoon zijn dus
+protected (logisch: het zijn auth-credentials).
+
+**Gekozen:** beide read-only tonen, met onder de card de tekst
+"E-mailadres of telefoonnummer wijzigen? Stuur een bericht naar
+[info@hlty.shop](mailto:info@hlty.shop?subject=Wijziging%20contactgegevens)".
+
+Geen Shopify-link meer in de UI — strikt eigen interface, met support-
+fallback voor de zeldzame e-mail/telefoonwijziging.
+
+### 3.2 Geen aparte default-address mutation
+
+Het schema heeft geen `customerDefaultAddressUpdate`. In plaats daarvan
+zit `defaultAddress: Boolean` als optionele argument op zowel
+`customerAddressCreate` als `customerAddressUpdate`. Eén minder route
+nodig in de geplande architectuur.
+
+"Standaard maken" doet nu een `PUT /api/customer/address?id=…` met body
+`{ "defaultAddress": true }` — daarmee maakt Shopify dat adres automatisch
+standaard en de andere adressen verliezen de status.
+
+### 3.3 Veldnamen volgens Customer Account API
+
+Storefront/Admin's `countryCode`/`countryCodeV2` bestaan niet hier.
+Customer Account API gebruikt `territoryCode` (ISO-2, bv. `"NL"`) en
+`zoneCode` (provincie/state-code) als **input**. Op de query-kant geeft
+het ook display-strings `country` ("Nederland") en `province`
+("Noord-Holland") terug.
+
+### 3.4 Landselector — vijf opties
+
+NL + BE + DE + FR + GB. Past bij HLTY's EU-bezorggebied; geen vrije ISO-
+selector om de UI klein te houden. Buitenlandse klanten kunnen via
+[info@hlty.shop](mailto:info@hlty.shop) een verzoek doen.
+
+### 3.5 Inline adres-form (geen modal)
+
+Toevoegen verschijnt als card onderaan de adreslijst, bewerken expandt
+de bestaande card. Past beter bij de rust van het dashboard en werkt
+prettiger op mobiel dan een modal.
+
+---
+
+## 4. Architectuur
 
 ```
-React /account (Profiel-tab)
+React /account → Profiel-tab
   │
-  ├── Persoonsgegevens-card
-  │     └── form  ──POST/PATCH──→  /api/customer/profile
+  ├── <PersonalInfoCard>
+  │     view-mode  → toont firstName/lastName/email/phone
+  │     edit-mode  → form → POST /api/customer/profile
   │
-  └── Adresboek-card
-        ├── lijst van adressen (uit customer-state)
-        ├── "Adres toevoegen" knop ─POST──→ /api/customer/address
-        ├── Bewerken knop  ──PUT───→ /api/customer/address/:id
-        ├── Verwijderen   ──DELETE→ /api/customer/address/:id
-        └── "Maak standaard" ──POST→ /api/customer/default-address
-                                       │
-                                       ▼
-                            Customer Account GraphQL
-                            (inlog.hlty.shop)
+  └── <AddressBookCard>
+        │
+        ├── lijst van <AddressItem>
+        │     ├── "Standaard maken"  → PUT /api/customer/address?id=…
+        │     ├── "Bewerken"         → expand naar <AddressEditor>
+        │     └── "Verwijderen"      → confirm → DELETE /api/customer/address?id=…
+        │
+        ├── "+ Adres toevoegen"      → <AddressEditor mode="create">
+        │                              → POST /api/customer/address
+        │
+        └── <AddressEditor> (herbruikt voor create + edit)
+              → form met land-select, postcode/phone-validatie
 ```
 
-### Nieuwe Vercel API routes nodig
+### 4.1 Nieuwe / gewijzigde bestanden
 
-| Route | Method | Doel |
-|-------|--------|------|
-| `/api/customer/profile` | POST | `customerUpdate` mutation (name, email, phone) |
-| `/api/customer/addresses` | GET | Haal alle adressen op (kan ook via `/api/customer/me` als die wordt uitgebreid) |
-| `/api/customer/address` | POST | `customerAddressCreate` |
-| `/api/customer/address/:id` | PUT | `customerAddressUpdate` |
-| `/api/customer/address/:id` | DELETE | `customerAddressDelete` |
-| `/api/customer/default-address` | POST | `customerDefaultAddressUpdate` |
+| Bestand | Doel |
+|---------|------|
+| [api/_customer-graphql.ts](../api/_customer-graphql.ts) | Shared helper: auth-cookie lezen, refresh-on-401, GraphQL POST naar Customer Account API |
+| [api/customer/profile.ts](../api/customer/profile.ts) | `POST` — `customerUpdate` met `firstName`/`lastName` |
+| [api/customer/address.ts](../api/customer/address.ts) | `POST`/`PUT`/`DELETE` — method-routing; PUT/DELETE met `?id=<gid>` query-param; `defaultAddress` als optionele body-flag |
+| [api/customer/me.ts](../api/customer/me.ts) | **uitgebreid** met `addresses(first: 20, skipDefault: false)` connectie — `defaultAddress.id` toegevoegd om matching te doen |
+| [src/lib/validators.ts](../src/lib/validators.ts) | `validatePhone` (E.164), `validateZip` (NL/BE/DE/FR/GB), `validateRequired`, `normalizeZip` (zet NL-postcodes naar `1234 AB`) |
+| [src/lib/countries.ts](../src/lib/countries.ts) | `COUNTRIES` lijst + `countryName(code)` lookup |
+| [src/context/CustomerContext.tsx](../src/context/CustomerContext.tsx) | `Customer` interface uitgebreid: `addresses: { edges: { node: CustomerAddress }[] }` + nieuw `CustomerAddress` type |
+| [src/pages/Account.tsx](../src/pages/Account.tsx) | `ProfileTab` volledig herschreven — nieuwe componenten `PersonalInfoCard`, `AddressBookCard`, `AddressItem`, `AddressEditor`, `FormField`, `FormError`, `ReadOnlyRow` |
+| [src/index.css](../src/index.css) | `.form-input` utility-class toegevoegd in `@layer components` |
 
-**Tip:** voor route-flexibiliteit kan dit ook één endpoint `/api/customer/address` zijn die per HTTP-method anders gedraagt. Vercel ondersteunt dat in één file.
-
-### Mutations naar Customer Account API (research nodig)
-
-De waarschijnlijke veldnamen (te valideren via introspection):
+### 4.2 GraphQL mutations
 
 ```graphql
+# Profiel
 mutation UpdateProfile($input: CustomerUpdateInput!) {
   customerUpdate(input: $input) {
-    customer { id firstName lastName emailAddress { emailAddress } phoneNumber { phoneNumber } }
+    customer { id firstName lastName displayName }
     userErrors { field message code }
   }
 }
 
+# Adres aanmaken (defaultAddress mag true zijn om het meteen standaard te maken)
 mutation CreateAddress($address: CustomerAddressInput!, $defaultAddress: Boolean) {
   customerAddressCreate(address: $address, defaultAddress: $defaultAddress) {
-    customerAddress { id ... }
+    customerAddress { ...AddressFields }
     userErrors { field message code }
   }
 }
 
-mutation UpdateAddress($addressId: ID!, $address: CustomerAddressInput!) {
-  customerAddressUpdate(addressId: $addressId, address: $address) {
-    customerAddress { id ... }
+# Adres updaten of alleen default-flag flippen
+mutation UpdateAddress($addressId: ID!, $address: CustomerAddressInput, $defaultAddress: Boolean) {
+  customerAddressUpdate(addressId: $addressId, address: $address, defaultAddress: $defaultAddress) {
+    customerAddress { ...AddressFields }
     userErrors { field message code }
   }
 }
 
+# Adres verwijderen
 mutation DeleteAddress($addressId: ID!) {
   customerAddressDelete(addressId: $addressId) {
     deletedAddressId
     userErrors { field message code }
   }
 }
+
+# Velden op CustomerAddress (query + AddressFields fragment)
+# id firstName lastName company address1 address2 city zip
+# province zoneCode country territoryCode phoneNumber formatted
 ```
 
-⚠️ **Belangrijk:** de Customer Account API gebruikt **andere veldnamen**
-dan Storefront/Admin API. In Fase 2 liep ik tegen `countryCodeV2 doesn't
-exist on type CustomerAddress` aan. Doe daarom **eerst** een introspection
-query om te bevestigen welke fields exact bestaan op:
-- `CustomerUpdateInput`
-- `CustomerAddressInput`
-- `MailingAddress` of `CustomerAddress` (welk type het is)
-
-Het schema is op `https://inlog.hlty.shop/customer/api/2026-04/graphql`
-(via `Authorization: <shcat_token>` header, dezelfde als in
-[api/customer/me.ts](../api/customer/me.ts)).
+`CustomerAddressInput` accepteert: `firstName`, `lastName`, `company`,
+`address1`, `address2`, `city`, `zip`, `territoryCode`, `zoneCode`,
+`phoneNumber`.
 
 ---
 
-## 4. UI-design — wat de klant ziet
+## 5. Workflow & problemen onderweg
 
-### Persoonsgegevens-card
+### 5.1 Schema-introspectie eerst
 
-```
-┌─────────────────────────────────────────────────────┐
-│  PERSOONSGEGEVENS                          [ Bewerken ] │
-├─────────────────────────────────────────────────────┤
-│  Voornaam   TEST                                     │
-│  Achternaam TEST                                     │
-│  E-mail     Ritsema2@gmail.com                       │
-│  Telefoon   —                                        │
-└─────────────────────────────────────────────────────┘
-```
+Eerste stap was een tijdelijke `/api/customer/introspect` route die
+`CustomerUpdateInput`, `CustomerAddressInput`, `CustomerAddress` en alle
+`customer*` mutations ophaalde. Deployed, JSON via browser-sessie
+opgehaald, gebruikt om de juiste veldnamen vast te leggen, daarna in een
+cleanup-commit weer verwijderd. Deze flow voorkwam herhaling van het
+`countryCodeV2 doesn't exist`-incident uit Fase 2.
 
-Bij klik op "Bewerken" → de waarden worden inputs, knoppen worden
-"Opslaan" + "Annuleren". Loading-state tijdens save. Success-banner
-("Profiel bijgewerkt"). Error-banner bij userErrors.
+### 5.2 Vercel CDN serveerde gecachte HTML
 
-### Adresboek-card
+**Symptoom:** na de frontend-push gaf de live `/account` pagina op het
+Profiel-tab nog steeds de oude OverviewTab-content terug, hoewel de
+bundle hash op disk een nieuwe `Persoonsgegevens`-string bevatte en
+`/api/customer/me` correct de uitgebreide payload teruggaf.
 
-```
-┌─────────────────────────────────────────────────────┐
-│  ADRESSEN                          [ + Adres toevoegen ] │
-├─────────────────────────────────────────────────────┤
-│  ┌───────────────────────────────────────────────┐  │
-│  │ [STANDAARD] TEST, 1                            │  │
-│  │             1234 TS TEST                       │  │
-│  │             Nederland                          │  │
-│  │                            [ Bewerken ] [ × ]   │  │
-│  └───────────────────────────────────────────────┘  │
-│                                                       │
-│  ┌───────────────────────────────────────────────┐  │
-│  │            Tweede Straat 42                    │  │
-│  │            5678 AB Amsterdam                   │  │
-│  │            Nederland                           │  │
-│  │  [ Standaard maken ] [ Bewerken ] [ × ]         │  │
-│  └───────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────┘
-```
+**Root cause:** Vercel's edge cache (zichtbaar via header
+`x-vercel-cache: HIT`, `age: 331`) hield een verlopen `/account` HTML
+vast die naar een script-src van vóór de Fase 4 deploy verwees. De
+nieuwe bundle stond wel op `/assets/index-CrfuCiTT.js`, maar de browser
+laadde de HTML met een script-src van een eerdere build.
 
-### Adres-formulier (inline of in een modal)
+**Fix:** een vervolgcommit (met een debug-marker) zorgde voor een nieuwe
+bundle-hash. Daarmee werd de SPA-fallback opnieuw gegenereerd en kreeg
+de cached `/account` een fresh script-src. De marker is in de
+cleanup-commit weer verwijderd.
 
-Velden:
-- Land/regio (select, default: Nederland)
-- Voornaam, Achternaam
-- Bedrijfsnaam (optioneel)
-- Straatnaam, Huisnummer + toevoeging
-- Postcode (validatie: NL/BE-formaat), Stad
-- Telefoon (optioneel)
+**Les:** een Vite content-hash garandeert dat `/assets/<hash>.js` uniek
+is, maar de HTML die ernaar verwijst kan apart cached blijven. Bij een
+"nieuwe code is gedeployed maar UI verandert niet" symptoom: check de
+`<script src>` in de live HTML, niet alleen de bundle-content. Een
+volgende minieme codewijziging die de hash verandert, forceert herinvallidatie.
+
+### 5.3 Geen runtime issues
+
+De `console.log` debug-marker en testronde via Chrome MCP toonden geen
+JS-errors, geen failed network requests. Alle vier de mutations werkten
+end-to-end in de eerste poging.
 
 ---
 
-## 5. Validatie en edge cases
+## 6. Eindstaat
 
-- **E-mail wijzigen:** Shopify stuurt een verificatie-mail. UI moet daarover
-  een melding tonen ("Check je inbox voor de bevestigingsmail")
-- **Telefoon:** moet in E.164-formaat (`+31612345678`). Een library als
-  `libphonenumber-js` (lichte versie) of regex
-- **Postcode NL:** `1234 AB` of `1234AB`
-- **Standaard adres verwijderen:** Shopify staat dat niet toe — UI moet
-  klant eerst een ander adres als standaard laten kiezen, anders foutmelding
-- **Het enige adres verwijderen:** waarschuwing tonen
-- **Netwerk failure:** form-state niet wissen, error-banner tonen
-- **Loading states:** elke API call krijgt zijn eigen `isSaving`-flag
-- **Optimistic updates:** voor adresboek nuttig — anders voelt het traag
+Visueel + functioneel bevestigd via end-to-end test op
+[www.hlty.shop](https://www.hlty.shop) (ingelogd als TEST):
 
----
+| Flow | Status |
+|------|--------|
+| Profiel-tab toont persoonsgegevens-card met inline view | ✅ |
+| "Bewerken" → form met autofocus op voornaam | ✅ |
+| "Annuleren" → herstel originele waarden, terug naar view-mode | ✅ |
+| E-mail / telefoon read-only met mailto info@hlty.shop link | ✅ |
+| Adresboek toont alle adressen | ✅ |
+| "Adres toevoegen" → inline form onderaan de lijst | ✅ |
+| Adres opslaan → verschijnt direct (na `useCustomer().refresh()`) | ✅ |
+| "Bewerken" op adres → AddressEditor expand met initial-values gevuld | ✅ |
+| Wijziging opslaan → adres-card update direct | ✅ |
+| "Standaard maken" → andere adres verliest STANDAARD-badge, dit krijgt 'm | ✅ |
+| "Verwijderen" → confirmation-rij verschijnt → klik Verwijderen → weg | ✅ |
+| Verwijderen-knop verborgen op enige + standaard adres (kan niet verwijderd worden) | ✅ |
+| Geen "Profiel bewerken bij Shopify"-link meer in de UI | ✅ |
 
-## 6. Workflow voor nieuwe sessie
+### Commits in deze fase
 
-Aanbevolen volgorde van werken:
-
-1. **Lees de docs**: `docs/README.md`, dan `01-fase-1-foundation.md`,
-   `02-fase-2-auth.md`, `03-fase-3-checkout-finishing.md`, en dit document
-2. **Schema-introspection** doen via een tijdelijke route of curl-call
-   zodat we de exacte veldnamen kennen voor `CustomerUpdateInput` en
-   `CustomerAddressInput`
-3. **Vercel API routes** bouwen (één per mutation, of één met
-   method-routing)
-4. **Type-definitions** uitbreiden in [src/context/CustomerContext.tsx](../src/context/CustomerContext.tsx)
-   voor het nieuwe `customer.addresses`-veld
-5. **Update `/api/customer/me`** om ook `customer.addresses(first: 20)` mee
-   te geven
-6. **ProfileTab** in [src/pages/Account.tsx](../src/pages/Account.tsx)
-   herschrijven met de twee cards
-7. **Form-validatie** als utility module (`src/lib/validators.ts`)
-8. **Test handmatig**: profiel bewerken, adres toevoegen, adres bewerken,
-   adres verwijderen, standaard-adres wisselen
-9. **Commit per logische unit**: API-routes apart, UI apart, types apart
-10. **Verslag schrijven** in `docs/04-fase-4-profile-edit.md` (vervang dit
-    document met de werkelijke ervaring)
+| Commit | Onderwerp |
+|--------|-----------|
+| `25f6bc6` | Tijdelijke `/api/customer/introspect` route voor schema-discovery |
+| `b63f823` | API routes voor eigen profile-edit (profile.ts, address.ts, me.ts uitgebreid, _customer-graphql.ts) |
+| `dcac690` | Eigen profile-edit UI vervangt Shopify-link (ProfileTab + sub-componenten + validators + countries + .form-input CSS) |
+| `c3a23e3` | DEBUG: marker + console.log in ProfileTab (om Vercel CDN-cache te invalideren) |
+| `53c6ecc` | Cleanup: introspect-route + debug-marker weg |
+| (volgende) | Dit verslag |
 
 ---
 
-## 7. Verwacht resultaat
+## 7. Aandachtspunten / open punten
 
-| Stap | Acceptatie |
-|------|------------|
-| Profiel-tab toont persoonsgegevens-card | klant ziet naam, e-mail, telefoon |
-| Klik op "Bewerken" → form opent | inputs verschijnen met huidige waarden |
-| Naam wijzigen + opslaan → API call → UI update | wijziging direct zichtbaar, geen page reload |
-| E-mail wijzigen → verificatie-melding | "Check je inbox" |
-| Telefoon invalid format → inline error | "Gebruik formaat +316..." |
-| Adresboek toont alle adressen | standaard-badge bij default |
-| "Adres toevoegen" → modal of inline form | formulier met validatie |
-| Adres opslaan → verschijnt in lijst | zonder page reload |
-| "Verwijderen" → bevestigings-dialog → API → uit lijst | weg na confirmatie |
-| "Standaard maken" → API → andere adressen verliezen standaard-badge | atomic UI-update |
-| Standaard adres proberen te verwijderen → blokkering | duidelijke melding |
-| Profiel-link "Profiel bewerken bij Shopify" weg | volledig vervangen |
+### Klein
+1. **AnimatePresence + framer-motion** geeft tijdens tab-switch een
+   exit→enter animatie van 0.18s. Snelle clicks tijdens transitie kunnen
+   onverwacht voelen, maar leiden niet tot rendering-fouten.
+2. **`useCustomer().refresh()`** na elke mutation re-fetcht `/api/customer/me`.
+   Geen optimistic updates, dus 200-500ms wachttijd zichtbaar.
+   Acceptabel voor de relatief lage frequentie van profielwijzigingen.
+3. **Veldfouten van Shopify** worden weergegeven met `userErrors.field`
+   → mapping naar inline form-error. Onbekend hoe Shopify ze
+   precies voor exotische landen rapporteert; getest met NL/BE.
+
+### Groot
+4. **E-mail/telefoon-wijziging via support** is een handmatig kanaal
+   nu. Als het volume groeit, optie om een aparte
+   support-ticket-route of in-app reservering te bouwen.
+5. **Geen e2e tests** — Playwright suite blijft op de takenlijst (zie
+   [03-fase-3-checkout-finishing.md § 6](./03-fase-3-checkout-finishing.md#6-aandachtspunten--open-punten)).
+   Komende regressies op Profiel-tab moet handmatig op live gechecked.
+
+### Architectuur
+6. **API design** — adres-routes gebruiken één file met method-routing
+   (`POST`/`PUT`/`DELETE`). Profile is een aparte file omdat het een
+   andere resource is. Schaalbaar voor toekomstige resources zoals
+   wishlist / nieuwsbrief-voorkeur.
+7. **`_customer-graphql.ts` helper** centraliseert de auth-loop. Nieuwe
+   mutation-routes kunnen die hergebruiken zonder de 40-regels
+   cookie/refresh-logica te dupliceren.
 
 ---
 
-## 8. Geschatte tijd
+## 8. Volgende stap: Fase 5
 
-- API routes + types: 1,5 uur
-- Profile-edit form + UI: 1,5 uur
-- Adresboek + adres-form: 2 uur
-- Validatie + edge cases: 1 uur
-- Test + polish: 1 uur
+Suggesties:
 
-**Totaal: ~7 uur werk** verspreid over één geconcentreerde sessie. Past
-in een halve werkdag.
-
----
-
-## 9. Na Fase 4
-
-Suggesties voor toekomstige fasen (zoals genoteerd in [03-fase-3-checkout-finishing.md § 6](./03-fase-3-checkout-finishing.md#6-aandachtspunten--open-punten)):
-
-- E-mail-param-format voor nieuwe Shopify checkout (zodat ook e-mail
-  pre-fill werkt in `cn/`-format)
-- Playwright e2e test-suite tegen regressies
-- Wishlist / favorieten via Customer metafields
-- Lighthouse performance audit + optimalisaties
-- SEO / sitemap / structured data
-- Reviews / sterren-rating systeem
+- **Playwright e2e test-suite** — vooral voor de Profiel-flow nu deze
+  veel state-mutaties heeft (zie open punt 5)
+- **Optimistic updates** in adresboek voor instant feedback
+- **Nieuwsbrief / e-mail marketing opt-in** via
+  `customerEmailMarketingSubscribe` (alleen zichtbaar in schema)
+- **Wishlist / favorieten** via Customer metafields (zie
+  [03-fase-3-checkout-finishing.md § 6](./03-fase-3-checkout-finishing.md#6-aandachtspunten--open-punten))
+- **Lighthouse performance audit** + bundle-size optimalisatie
+  (`framer-motion` is 128 KB gzipped)
+- **SEO / sitemap / structured data**

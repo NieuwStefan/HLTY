@@ -1,6 +1,23 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { COOKIES, type SessionCookie } from '../lib/customer-auth-shared';
 
+export interface CustomerAddress {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  company: string | null;
+  address1: string | null;
+  address2: string | null;
+  city: string | null;
+  zip: string | null;
+  province: string | null;
+  zoneCode: string | null;
+  country: string | null;
+  territoryCode: string | null;
+  phoneNumber: string | null;
+  formatted: string[];
+}
+
 export interface Customer {
   id: string;
   firstName: string;
@@ -8,14 +25,13 @@ export interface Customer {
   displayName: string;
   emailAddress: { emailAddress: string } | null;
   phoneNumber: { phoneNumber: string } | null;
-  defaultAddress: {
-    address1: string;
-    address2: string | null;
-    city: string;
-    zip: string;
-    country: string;
-    formatted: string[];
-  } | null;
+  defaultAddress: (Pick<
+    CustomerAddress,
+    'id' | 'address1' | 'address2' | 'city' | 'zip' | 'country' | 'formatted'
+  >) | null;
+  addresses: {
+    edges: { node: CustomerAddress }[];
+  };
 }
 
 interface CustomerContextType {

@@ -58,12 +58,17 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Tracks whether we've already attempted to fetch the customer for the
+  // current session. Prevents an infinite retry-loop when /api/customer/me
+  // returns a non-401 error.
+  const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
 
   const isLoggedIn = session !== null;
 
   const fetchCustomer = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setHasAttemptedFetch(true);
     try {
       const res = await fetch('/api/customer/me', { credentials: 'same-origin' });
       if (res.status === 401) {
@@ -71,10 +76,12 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
         setCustomer(null);
         return;
       }
-      if (!res.ok) throw new Error(`/api/customer/me returned ${res.status}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? `/api/customer/me returned ${res.status}`);
+      }
       const data = (await res.json()) as Customer | null;
       setCustomer(data);
-      // Re-sync session cookie in case it was refreshed server-side.
       setSession(readSessionCookie());
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load customer');
@@ -83,12 +90,19 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Auto-load customer profile when logged in.
+  // Auto-load customer profile once when logged in. If it fails, the user
+  // sees an error message instead of an infinite spinner — they can retry
+  // by reloading.
   useEffect(() => {
-    if (isLoggedIn && !customer && !isLoading) {
+    if (isLoggedIn && !customer && !isLoading && !hasAttemptedFetch) {
       void fetchCustomer();
     }
-  }, [isLoggedIn, customer, isLoading, fetchCustomer]);
+  }, [isLoggedIn, customer, isLoading, hasAttemptedFetch, fetchCustomer]);
+
+  // Reset the attempt-tracker when the user logs out so a fresh login can refetch.
+  useEffect(() => {
+    if (!isLoggedIn) setHasAttemptedFetch(false);
+  }, [isLoggedIn]);
 
   // Re-read session cookie on tab focus (handles login from another tab).
   useEffect(() => {
@@ -106,9 +120,14 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     window.location.href = '/api/auth/logout';
   }, []);
 
+  const refresh = useCallback(async () => {
+    setHasAttemptedFetch(false);
+    await fetchCustomer();
+  }, [fetchCustomer]);
+
   return (
     <CustomerContext.Provider
-      value={{ session, customer, isLoading, error, isLoggedIn, login, logout, refresh: fetchCustomer }}
+      value={{ session, customer, isLoading, error, isLoggedIn, login, logout, refresh }}
     >
       {children}
     </CustomerContext.Provider>

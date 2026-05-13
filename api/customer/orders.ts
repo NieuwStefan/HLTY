@@ -89,9 +89,11 @@ export default async function handler(req: VercelReq, res: VercelRes) {
   }
 
   if (!response || !response.ok) {
+    const detail = response ? await response.text() : 'no response';
+    console.error('[customer/orders] GraphQL failed', response?.status, detail);
     res.status(response?.status ?? 502).json({
       error: 'Customer Account API request failed',
-      detail: response ? await response.text() : 'no response',
+      detail,
     });
     return;
   }
@@ -101,6 +103,7 @@ export default async function handler(req: VercelReq, res: VercelRes) {
     errors?: unknown;
   };
   if (data.errors) {
+    console.error('[customer/orders] GraphQL errors', JSON.stringify(data.errors));
     res.status(502).json({ error: 'GraphQL error', detail: data.errors });
     return;
   }
@@ -115,7 +118,7 @@ function graphql(accessToken: string, query: string, variables: Record<string, u
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: accessToken,
+      Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify({ query, variables }),
   });

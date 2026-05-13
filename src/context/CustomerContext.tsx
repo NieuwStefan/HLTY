@@ -14,7 +14,7 @@ export interface Customer {
     city: string;
     zip: string;
     country: string;
-    countryCodeV2: string;
+    formatted: string[];
   } | null;
 }
 

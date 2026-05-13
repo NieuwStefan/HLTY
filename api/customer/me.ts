@@ -32,7 +32,7 @@ const QUERY = `
         city
         zip
         country
-        countryCodeV2
+        formatted
       }
     }
   }

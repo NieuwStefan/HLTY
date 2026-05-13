@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
@@ -13,8 +13,31 @@ import {
   Phone,
   MapPin,
   ExternalLink,
+  X,
+  Truck,
+  RotateCcw,
 } from 'lucide-react';
 import { useCustomer } from '../context/CustomerContext';
+import { useCart } from '../context/CartContext';
+
+interface OrderLineItem {
+  title: string;
+  quantity: number;
+  variantTitle: string | null;
+  variantId: string | null;
+  image: { url: string; altText: string | null } | null;
+}
+
+interface TrackingInfo {
+  number: string | null;
+  url: string | null;
+  company: string | null;
+}
+
+interface Fulfillment {
+  status: string;
+  trackingInformation: TrackingInfo[];
+}
 
 interface Order {
   id: string;
@@ -24,16 +47,14 @@ interface Order {
   financialStatus: string;
   fulfillmentStatus: string;
   totalPrice: { amount: string; currencyCode: string };
-  lineItems: {
-    edges: {
-      node: {
-        title: string;
-        quantity: number;
-        variantTitle: string | null;
-        image: { url: string; altText: string | null } | null;
-      };
-    }[];
-  };
+  shippingAddress: {
+    formatted: string[];
+    city: string;
+    zip: string;
+    country: string;
+  } | null;
+  fulfillments: { edges: { node: Fulfillment }[] };
+  lineItems: { edges: { node: OrderLineItem }[] };
 }
 
 type Tab = 'overview' | 'orders' | 'profile';
@@ -238,6 +259,7 @@ function OrdersTab() {
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -273,15 +295,22 @@ function OrdersTab() {
   }
 
   return (
-    <div className="space-y-3">
-      {orders.map((order) => (
-        <OrderCard key={order.id} order={order} />
-      ))}
-    </div>
+    <>
+      <div className="space-y-3">
+        {orders.map((order) => (
+          <OrderCard key={order.id} order={order} onOpen={() => setSelectedOrder(order)} />
+        ))}
+      </div>
+      <AnimatePresence>
+        {selectedOrder && (
+          <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 
-function OrderCard({ order }: { order: Order }) {
+function OrderCard({ order, onOpen }: { order: Order; onOpen: () => void }) {
   const items = order.lineItems.edges.map((e) => e.node);
   const total = formatPrice(order.totalPrice.amount, order.totalPrice.currencyCode);
   const date = new Date(order.processedAt).toLocaleDateString('nl-NL', {
@@ -291,7 +320,10 @@ function OrderCard({ order }: { order: Order }) {
   });
 
   return (
-    <div className="card p-5">
+    <button
+      onClick={onOpen}
+      className="card p-5 w-full text-left hover:!shadow-lg transition-shadow"
+    >
       <div className="flex items-start justify-between gap-4 mb-3">
         <div>
           <p className="text-xs uppercase tracking-wider text-[var(--color-muted)]">
@@ -329,7 +361,202 @@ function OrderCard({ order }: { order: Order }) {
           </span>
         )}
       </div>
-    </div>
+    </button>
+  );
+}
+
+function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => void }) {
+  const { addItem, openCart } = useCart();
+  const [reorderState, setReorderState] = useState<'idle' | 'busy' | 'done' | 'partial'>('idle');
+  const [reorderMessage, setReorderMessage] = useState<string | null>(null);
+
+  const items = useMemo(() => order.lineItems.edges.map((e) => e.node), [order]);
+  const trackings = useMemo(
+    () =>
+      order.fulfillments.edges
+        .flatMap((e) => e.node.trackingInformation)
+        .filter((t) => t.url || t.number),
+    [order],
+  );
+  const total = formatPrice(order.totalPrice.amount, order.totalPrice.currencyCode);
+  const date = new Date(order.processedAt).toLocaleDateString('nl-NL', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const onReorder = async () => {
+    setReorderState('busy');
+    setReorderMessage(null);
+    const reorderable = items.filter((i) => i.variantId);
+    if (reorderable.length === 0) {
+      setReorderState('done');
+      setReorderMessage('Geen producten beschikbaar om opnieuw te bestellen.');
+      return;
+    }
+    let added = 0;
+    let failed = 0;
+    for (const item of reorderable) {
+      try {
+        await addItem(item.variantId!, item.quantity);
+        added++;
+      } catch {
+        failed++;
+      }
+    }
+    if (added > 0) {
+      setReorderState(failed > 0 ? 'partial' : 'done');
+      setReorderMessage(
+        failed > 0
+          ? `${added} item(s) toegevoegd, ${failed} niet meer beschikbaar.`
+          : 'Alles toegevoegd aan je winkelwagen.',
+      );
+      setTimeout(() => {
+        onClose();
+        openCart();
+      }, 1200);
+    } else {
+      setReorderState('done');
+      setReorderMessage('Geen van de items is meer op voorraad.');
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 24, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 24, scale: 0.96 }}
+        transition={{ duration: 0.2 }}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-[640px] max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-black/5 px-6 py-4 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-[var(--color-muted)]">{order.name}</p>
+            <p className="text-base font-bold text-[var(--color-navy)]" style={{ fontFamily: 'Montserrat' }}>
+              Bestelling van {date}
+            </p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-black/5">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-5">
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-xs text-[var(--color-muted)]">
+              {statusLabel(order.fulfillmentStatus, order.financialStatus)}
+            </p>
+            <p className="text-base font-bold text-[var(--color-navy)]">{total}</p>
+          </div>
+
+          {trackings.length > 0 && (
+            <div className="card p-4 bg-[var(--color-primary)]/5 border-[var(--color-primary)]/30">
+              <div className="flex items-center gap-2 mb-2">
+                <Truck className="w-4 h-4 text-[var(--color-primary)]" />
+                <p className="text-sm font-semibold text-[var(--color-navy)]">Verzending</p>
+              </div>
+              <div className="space-y-1">
+                {trackings.map((t, i) => (
+                  <div key={i} className="text-xs text-[var(--color-navy)]/80">
+                    {t.company && <span className="font-medium">{t.company}: </span>}
+                    {t.url ? (
+                      <a
+                        href={t.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[var(--color-primary)] hover:underline inline-flex items-center gap-1"
+                      >
+                        {t.number ?? 'Tracking openen'}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    ) : (
+                      <span>{t.number}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {order.shippingAddress && order.shippingAddress.formatted.length > 0 && (
+            <div>
+              <p className="text-xs uppercase tracking-wider text-[var(--color-muted)] mb-2">
+                Bezorgadres
+              </p>
+              <p className="text-sm text-[var(--color-navy)]/80">
+                {order.shippingAddress.formatted.join(', ')}
+              </p>
+            </div>
+          )}
+
+          <div>
+            <p className="text-xs uppercase tracking-wider text-[var(--color-muted)] mb-2">
+              Producten
+            </p>
+            <div className="space-y-2">
+              {items.map((item, i) => (
+                <div key={i} className="flex items-center gap-3 p-2 rounded-xl">
+                  {item.image?.url ? (
+                    <img
+                      src={item.image.url}
+                      alt={item.image.altText ?? item.title}
+                      className="w-12 h-12 rounded-lg object-cover bg-gray-50 flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg bg-gray-100 flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[var(--color-navy)] truncate">{item.title}</p>
+                    {item.variantTitle && item.variantTitle !== 'Default Title' && (
+                      <p className="text-[11px] text-[var(--color-muted)]">{item.variantTitle}</p>
+                    )}
+                  </div>
+                  <p className="text-xs text-[var(--color-muted)] flex-shrink-0">
+                    × {item.quantity}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {reorderMessage && (
+            <p
+              className={`text-xs text-center ${
+                reorderState === 'done' ? 'text-green-600' : 'text-[var(--color-muted)]'
+              }`}
+            >
+              {reorderMessage}
+            </p>
+          )}
+
+          <button
+            onClick={onReorder}
+            disabled={reorderState === 'busy'}
+            className="btn-primary w-full py-3 text-sm gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {reorderState === 'busy' ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Toevoegen...
+              </>
+            ) : (
+              <>
+                <RotateCcw className="w-4 h-4" />
+                Opnieuw bestellen
+              </>
+            )}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 

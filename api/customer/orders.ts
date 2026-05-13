@@ -26,13 +26,32 @@ const QUERY = `
             financialStatus
             fulfillmentStatus
             totalPrice { amount currencyCode }
-            lineItems(first: 5) {
+            shippingAddress {
+              formatted
+              city
+              zip
+              country
+            }
+            fulfillments(first: 5) {
+              edges {
+                node {
+                  status
+                  trackingInformation {
+                    number
+                    url
+                    company
+                  }
+                }
+              }
+            }
+            lineItems(first: 25) {
               edges {
                 node {
                   title
                   quantity
                   image { url altText }
                   variantTitle
+                  variantId
                 }
               }
             }

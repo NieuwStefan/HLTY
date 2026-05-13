@@ -1,13 +1,47 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useCustomer } from '../context/CustomerContext';
 import { formatPrice } from '../lib/shopify';
+
+// Appends customer-data query params to the Shopify checkout URL so that
+// e-mail and shipping fields are pre-filled when the buyer arrives. This
+// is a workaround because the Customer Account API access token (shcat_)
+// is not yet accepted by Storefront API's cart.buyerIdentity field
+// (see github.com/Shopify/hydrogen/issues/2495).
+function buildPrefilledCheckoutUrl(
+  baseUrl: string,
+  customer: ReturnType<typeof useCustomer>['customer'],
+): string {
+  if (!customer) return baseUrl;
+  const url = new URL(baseUrl);
+  const set = (k: string, v: string | null | undefined) => {
+    if (v) url.searchParams.set(k, v);
+  };
+  set('checkout[email]', customer.emailAddress?.emailAddress);
+  set('checkout[shipping_address][first_name]', customer.firstName);
+  set('checkout[shipping_address][last_name]', customer.lastName);
+  set('checkout[shipping_address][phone]', customer.phoneNumber?.phoneNumber);
+  const addr = customer.defaultAddress;
+  if (addr) {
+    set('checkout[shipping_address][address1]', addr.address1);
+    set('checkout[shipping_address][address2]', addr.address2);
+    set('checkout[shipping_address][city]', addr.city);
+    set('checkout[shipping_address][zip]', addr.zip);
+    set('checkout[shipping_address][country]', addr.country);
+  }
+  return url.toString();
+}
 
 export default function CartDrawer() {
   const { cart, isOpen, closeCart, isLoading, updateItem, removeItem } = useCart();
+  const { customer } = useCustomer();
 
   const lines = cart?.lines || [];
   const subtotal = cart?.cost?.subtotalAmount;
+  const checkoutHref = cart?.checkoutUrl
+    ? buildPrefilledCheckoutUrl(cart.checkoutUrl, customer)
+    : '#';
 
   return (
     <AnimatePresence>
@@ -153,10 +187,7 @@ export default function CartDrawer() {
                 <p className="text-xs text-[var(--color-muted)]">
                   Verzendkosten worden berekend bij het afrekenen.
                 </p>
-                <a
-                  href={cart?.checkoutUrl || '#'}
-                  className="btn-primary w-full py-4 text-sm gap-2"
-                >
+                <a href={checkoutHref} className="btn-primary w-full py-4 text-sm gap-2">
                   Afrekenen
                   <ArrowRight className="w-4 h-4" />
                 </a>

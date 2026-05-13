@@ -17,7 +17,8 @@ import {
 
 export default function Header() {
   const { cart, openCart } = useCart();
-  const { session } = useCustomer();
+  const { session, customer } = useCustomer();
+  const displayFirstName = session?.firstName || customer?.firstName || '';
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [expandedSub, setExpandedSub] = useState<string | null>(null);
@@ -329,9 +330,9 @@ export default function Header() {
                   onClick={() => setActiveDropdown(null)}
                 >
                   <User className="w-5 h-5 text-[var(--color-navy)]" />
-                  {session?.firstName && (
+                  {displayFirstName && (
                     <span className="text-sm font-medium text-[var(--color-navy)] max-w-[120px] truncate">
-                      Hoi {session.firstName}
+                      Hoi {displayFirstName}
                     </span>
                   )}
                 </Link>

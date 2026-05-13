@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, ShoppingBag, Menu, X, ChevronDown, ChevronRight, User } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useCustomer } from '../context/CustomerContext';
 import {
   getMenu,
   menuItemToRoute,
@@ -16,6 +17,7 @@ import {
 
 export default function Header() {
   const { cart, openCart } = useCart();
+  const { session } = useCustomer();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [expandedSub, setExpandedSub] = useState<string | null>(null);
@@ -322,11 +324,16 @@ export default function Header() {
 
                 <Link
                   to="/account"
-                  className="p-2.5 rounded-full hover:bg-black/5 transition-colors hidden sm:flex"
+                  className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-full hover:bg-black/5 transition-colors"
                   aria-label="Account"
                   onClick={() => setActiveDropdown(null)}
                 >
                   <User className="w-5 h-5 text-[var(--color-navy)]" />
+                  {session?.firstName && (
+                    <span className="text-sm font-medium text-[var(--color-navy)] max-w-[120px] truncate">
+                      Hoi {session.firstName}
+                    </span>
+                  )}
                 </Link>
 
                 <button

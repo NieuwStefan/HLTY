@@ -11,6 +11,7 @@ import Collection from './pages/Collection';
 import Product from './pages/Product';
 import Search from './pages/Search';
 import Account from './pages/Account';
+import AuthCallback from './pages/AuthCallback';
 import Brand from './pages/Brand';
 
 const pageTransition = {
@@ -44,6 +45,7 @@ export default function App() {
                   <Route path="/product/:handle" element={<Product />} />
                   <Route path="/zoeken" element={<Search />} />
                   <Route path="/account" element={<Account />} />
+                  <Route path="/auth/callback" element={<AuthCallback />} />
                 </Routes>
               </motion.div>
             </AnimatePresence>

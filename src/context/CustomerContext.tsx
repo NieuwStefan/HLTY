@@ -1,117 +1,114 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { COOKIES, type SessionCookie } from '../lib/customer-auth-shared';
 
-const ACCOUNT_URL = 'https://inlog.hlty.shop';
-const STORAGE_KEY = 'hlty-logged-in';
+export interface Customer {
+  id: string;
+  firstName: string;
+  lastName: string;
+  displayName: string;
+  emailAddress: { emailAddress: string } | null;
+  phoneNumber: { phoneNumber: string } | null;
+  defaultAddress: {
+    address1: string;
+    address2: string | null;
+    city: string;
+    zip: string;
+    country: string;
+    countryCodeV2: string;
+  } | null;
+}
 
 interface CustomerContextType {
-  isLoggedIn: boolean;
+  // Lightweight session info from a non-HTTP-only cookie — available
+  // instantly on every page load without a network call.
+  session: SessionCookie | null;
+  // Full customer profile from Customer Account API — loaded lazily.
+  customer: Customer | null;
   isLoading: boolean;
-  popupOpen: boolean;
-  openAccountPopup: () => void;
-  openOrdersPopup: () => void;
+  error: string | null;
+  // Returns true if the user appears logged in (has a session cookie).
+  isLoggedIn: boolean;
+  // Triggers the OAuth redirect. `returnTo` is where to send the user
+  // after successful login. Defaults to the current pathname.
+  login: (returnTo?: string) => void;
   logout: () => void;
+  // Force-refresh the customer profile from the API.
+  refresh: () => Promise<void>;
 }
 
 const CustomerContext = createContext<CustomerContextType | null>(null);
 
+function readSessionCookie(): SessionCookie | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.split('; ').find((c) => c.startsWith(`${COOKIES.session}=`));
+  if (!match) return null;
+  try {
+    const value = decodeURIComponent(match.slice(COOKIES.session.length + 1));
+    // value is base64url(JSON)
+    const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    return JSON.parse(atob(padded)) as SessionCookie;
+  } catch {
+    return null;
+  }
+}
+
 export function CustomerProvider({ children }: { children: ReactNode }) {
-  const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem(STORAGE_KEY) === 'true');
+  const [session, setSession] = useState<SessionCookie | null>(() => readSessionCookie());
+  const [customer, setCustomer] = useState<Customer | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [popupOpen, setPopupOpen] = useState(false);
-  const popupRef = useRef<Window | null>(null);
-  const intervalRef = useRef<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const stopPolling = useCallback(() => {
-    if (intervalRef.current !== null) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    setPopupOpen(false);
-    popupRef.current = null;
-  }, []);
+  const isLoggedIn = session !== null;
 
-  const startPolling = useCallback(() => {
-    intervalRef.current = window.setInterval(() => {
-      try {
-        const closed = popupRef.current?.closed;
-        if (closed) {
-          stopPolling();
-          // Small delay to let Shopify session settle
-          setTimeout(() => {
-            localStorage.setItem(STORAGE_KEY, 'true');
-            setIsLoggedIn(true);
-            setIsLoading(false);
-          }, 500);
-        }
-      } catch {
-        // Cross-origin error = popup still on Shopify domain — keep waiting
+  const fetchCustomer = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/customer/me', { credentials: 'same-origin' });
+      if (res.status === 401) {
+        setSession(null);
+        setCustomer(null);
+        return;
       }
-    }, 800);
-  }, [stopPolling]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current !== null) clearInterval(intervalRef.current);
-    };
+      if (!res.ok) throw new Error(`/api/customer/me returned ${res.status}`);
+      const data = (await res.json()) as Customer | null;
+      setCustomer(data);
+      // Re-sync session cookie in case it was refreshed server-side.
+      setSession(readSessionCookie());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load customer');
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  // Window focus: sync from localStorage
+  // Auto-load customer profile when logged in.
   useEffect(() => {
-    const onFocus = () => {
-      const stored = localStorage.getItem(STORAGE_KEY) === 'true';
-      setIsLoggedIn(stored);
-    };
+    if (isLoggedIn && !customer && !isLoading) {
+      void fetchCustomer();
+    }
+  }, [isLoggedIn, customer, isLoading, fetchCustomer]);
+
+  // Re-read session cookie on tab focus (handles login from another tab).
+  useEffect(() => {
+    const onFocus = () => setSession(readSessionCookie());
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
   }, []);
 
-  const openAccountPopup = useCallback(() => {
-    const w = 480;
-    const h = 640;
-    const left = Math.round((screen.width - w) / 2);
-    const top = Math.round((screen.height - h) / 2);
-
-    popupRef.current = window.open(
-      ACCOUNT_URL,
-      'hlty_account',
-      `width=${w},height=${h},left=${left},top=${top}`
-    );
-    setPopupOpen(true);
-    setIsLoading(true);
-    startPolling();
-  }, [startPolling]);
-
-  const openOrdersPopup = useCallback(() => {
-    const w = 480;
-    const h = 640;
-    const left = Math.round((screen.width - w) / 2);
-    const top = Math.round((screen.height - h) / 2);
-
-    window.open(
-      `${ACCOUNT_URL}/account`,
-      'hlty_account',
-      `width=${w},height=${h},left=${left},top=${top}`
-    );
+  const login = useCallback((returnTo?: string) => {
+    const target = returnTo ?? window.location.pathname + window.location.search;
+    window.location.href = `/api/auth/start?return_to=${encodeURIComponent(target)}`;
   }, []);
 
   const logout = useCallback(() => {
-    // Open logout URL in hidden iframe, then remove it
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    iframe.src = `${ACCOUNT_URL}/account/logout`;
-    document.body.appendChild(iframe);
-    setTimeout(() => {
-      document.body.removeChild(iframe);
-    }, 3000);
-
-    setIsLoggedIn(false);
-    localStorage.removeItem(STORAGE_KEY);
+    window.location.href = '/api/auth/logout';
   }, []);
 
   return (
     <CustomerContext.Provider
-      value={{ isLoggedIn, isLoading, popupOpen, openAccountPopup, openOrdersPopup, logout }}
+      value={{ session, customer, isLoading, error, isLoggedIn, login, logout, refresh: fetchCustomer }}
     >
       {children}
     </CustomerContext.Provider>

@@ -20,7 +20,11 @@ export default function handler(req: VercelReq, res: VercelRes) {
   }
 
   const cookies = parseCookies(req.headers.cookie as string | undefined);
-  const idToken = cookies[COOKIES.access]; // not the id_token but close enough — Shopify accepts the access token here too
+  // Shopify's OIDC logout endpoint requires a real id_token (JWT) as
+  // `id_token_hint`. The shcat_ access token does NOT work and returns
+  // "Ongeldige id_token", which leaves the customer-account session
+  // active on the checkout subdomain.
+  const idToken = cookies[COOKIES.id];
 
   res.setHeader('Set-Cookie', [
     clearCookie(COOKIES.access),
@@ -28,9 +32,9 @@ export default function handler(req: VercelReq, res: VercelRes) {
     clearCookie(COOKIES.session),
     clearCookie(COOKIES.verifier),
     clearCookie(COOKIES.state),
+    clearCookie(COOKIES.id),
   ]);
 
-  // Build Shopify logout URL with post_logout_redirect_uri.
   const logoutUrl = new URL(CUSTOMER_AUTH.logoutUrl);
   if (idToken) {
     logoutUrl.searchParams.set('id_token_hint', idToken);

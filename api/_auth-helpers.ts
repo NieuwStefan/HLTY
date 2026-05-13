@@ -26,6 +26,9 @@ export const COOKIES = {
   access: 'hlty_access',
   refresh: 'hlty_refresh',
   session: 'hlty_session',
+  // OIDC id_token (JWT). Shopify's logout endpoint accepts this as
+  // `id_token_hint` to invalidate the customer-account session.
+  id: 'hlty_id',
 } as const;
 
 export interface SessionCookie {
@@ -158,6 +161,18 @@ export function buildAuthCookies(token: TokenResponse): string[] {
         // Refresh tokens are valid for ~24h on Shopify Customer Account API;
         // we keep the cookie for a week so it survives across visits but
         // older tokens will fail and trigger a re-login (acceptable).
+        maxAge: 60 * 60 * 24 * 7,
+        httpOnly: true,
+      }),
+    );
+  }
+  // Persist the OIDC id_token so /api/auth/logout can pass it to Shopify
+  // as `id_token_hint`. Without this Shopify rejects the logout call
+  // with "Ongeldige id_token" and the customer-account session keeps
+  // identifying the browser on the checkout subdomain.
+  if (token.id_token) {
+    headers.push(
+      serializeCookie(COOKIES.id, token.id_token, {
         maxAge: 60 * 60 * 24 * 7,
         httpOnly: true,
       }),

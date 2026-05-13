@@ -63,40 +63,23 @@ export default async function handler(req: VercelReq, res: VercelRes) {
   });
 
   try {
-    const token = await callTokenEndpoint(tokenBody, CUSTOMER_AUTH.tokenUrl);
-    // Diagnostic: log the token prefix so we can confirm whether Shopify
-    // hands us an `atkn_`-prefixed token (which needs a second token-
-    // exchange step to become an `shcat_` token) or already an `shcat_`.
-    console.log(
-      '[auth/exchange] tokens received:',
-      `access=${maskPrefix(token.access_token)}`,
-      `refresh=${maskPrefix(token.refresh_token)}`,
-      `expires_in=${token.expires_in}`,
-      `scope=${token.scope ?? ''}`,
-      `token_type=${token.token_type}`,
-    );
+    const initial = await callTokenEndpoint(tokenBody, CUSTOMER_AUTH.tokenUrl);
 
-    // Attempt the Customer Account API token-exchange to get an
-    // `shcat_`-prefixed access token if we don't already have one.
-    let finalToken = token;
-    if (!token.access_token.startsWith('shcat_')) {
-      try {
-        const exchangeBody = new URLSearchParams({
-          grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
-          client_id: CUSTOMER_AUTH.clientId,
-          audience: '30243aa5-17c1-465a-8493-944bcc4e88aa',
-          subject_token: token.access_token,
-          subject_token_type: 'urn:ietf:params:oauth:token-type:access_token',
-          scopes: 'https://api.customers.com/auth/customer.graphql',
-        });
-        const exchanged = await callTokenEndpoint(exchangeBody, CUSTOMER_AUTH.tokenUrl);
-        console.log('[auth/exchange] post-exchange:', `access=${maskPrefix(exchanged.access_token)}`);
-        finalToken = { ...token, ...exchanged };
-      } catch (e) {
-        console.error('[auth/exchange] token-exchange step failed:', e instanceof Error ? e.message : e);
-        // Continue with the original token; /api/customer/me will surface
-        // a clear error if that token doesn't work either.
-      }
+    // Shopify's code-grant returns an `atkn_`-prefixed access token, but
+    // the Customer Account GraphQL API requires an `shcat_`-prefixed one.
+    // Bridge with the documented token-exchange grant.
+    let finalToken = initial;
+    if (!initial.access_token.startsWith('shcat_')) {
+      const exchangeBody = new URLSearchParams({
+        grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
+        client_id: CUSTOMER_AUTH.clientId,
+        audience: '30243aa5-17c1-465a-8493-944bcc4e88aa',
+        subject_token: initial.access_token,
+        subject_token_type: 'urn:ietf:params:oauth:token-type:access_token',
+        scopes: 'https://api.customers.com/auth/customer.graphql',
+      });
+      const exchanged = await callTokenEndpoint(exchangeBody, CUSTOMER_AUTH.tokenUrl);
+      finalToken = { ...initial, ...exchanged };
     }
 
     const cookieHeaders = [
@@ -109,13 +92,6 @@ export default async function handler(req: VercelReq, res: VercelRes) {
   } catch (err) {
     res.status(502).json({ error: err instanceof Error ? err.message : 'Token exchange failed' });
   }
-}
-
-function maskPrefix(s: string | undefined): string {
-  if (!s) return '<none>';
-  const dot = s.indexOf('_');
-  if (dot >= 0 && dot < 12) return `${s.slice(0, dot + 1)}...(len=${s.length})`;
-  return `${s.slice(0, 8)}...(len=${s.length})`;
 }
 
 function safeJson(s: string): Body | null {

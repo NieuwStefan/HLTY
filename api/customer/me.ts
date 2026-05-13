@@ -6,8 +6,9 @@
 // Auto-refreshes the access token on 401. Returns 401 to the client if
 // not logged in.
 
-import { CUSTOMER_AUTH, COOKIES } from '../../src/lib/customer-auth-shared';
 import {
+  CUSTOMER_AUTH,
+  COOKIES,
   parseCookies,
   callTokenEndpoint,
   buildAuthCookies,

@@ -4,8 +4,9 @@
 // endpoint, which in turn redirects back to postLogoutUri once the
 // Shopify session is gone.
 
-import { CUSTOMER_AUTH, COOKIES } from '../../src/lib/customer-auth-shared';
 import {
+  CUSTOMER_AUTH,
+  COOKIES,
   clearCookie,
   parseCookies,
   type VercelReq,

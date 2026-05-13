@@ -4,7 +4,34 @@
 // so this file is safe to import from other api/ handlers.
 
 import crypto from 'node:crypto';
-import { COOKIES, type SessionCookie } from '../src/lib/customer-auth-shared';
+
+// Constants duplicated from src/lib/customer-auth-shared.ts to keep this
+// file self-contained — Vercel can't always resolve imports from outside
+// the api/ directory when bundling serverless functions.
+
+export const CUSTOMER_AUTH = {
+  clientId: 'e95f30c7-5193-4188-84a9-7328be328ec4',
+  authorizeUrl: 'https://inlog.hlty.shop/authentication/oauth/authorize',
+  tokenUrl: 'https://inlog.hlty.shop/authentication/oauth/token',
+  logoutUrl: 'https://inlog.hlty.shop/authentication/logout',
+  graphqlUrl: 'https://inlog.hlty.shop/customer/api/2026-04/graphql',
+  scope: 'openid email customer-account-api:full',
+  redirectUri: 'https://www.hlty.shop/auth/callback',
+  postLogoutUri: 'https://www.hlty.shop/',
+} as const;
+
+export const COOKIES = {
+  verifier: 'hlty_pkce_verifier',
+  state: 'hlty_pkce_state',
+  access: 'hlty_access',
+  refresh: 'hlty_refresh',
+  session: 'hlty_session',
+} as const;
+
+export interface SessionCookie {
+  firstName: string;
+  expiresAt: number;
+}
 
 // ---------- PKCE ----------
 

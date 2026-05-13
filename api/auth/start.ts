@@ -8,8 +8,9 @@
 //   return_to: optional path on www.hlty.shop to send the user to after
 //              login completes. Defaults to "/account".
 
-import { CUSTOMER_AUTH, COOKIES } from '../../src/lib/customer-auth-shared';
 import {
+  CUSTOMER_AUTH,
+  COOKIES,
   generateVerifier,
   generateState,
   challengeFor,

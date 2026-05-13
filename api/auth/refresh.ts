@@ -7,8 +7,9 @@
 // Response: { ok: true } if refreshed, 401 if no refresh token or
 // Shopify rejected it (caller should redirect to /api/auth/start).
 
-import { CUSTOMER_AUTH, COOKIES } from '../../src/lib/customer-auth-shared';
 import {
+  CUSTOMER_AUTH,
+  COOKIES,
   parseCookies,
   callTokenEndpoint,
   buildAuthCookies,

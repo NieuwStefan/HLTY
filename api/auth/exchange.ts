@@ -8,8 +8,9 @@
 // Body: { code: string, state: string }
 // Response: { returnTo: string } — where the React app should navigate next
 
-import { CUSTOMER_AUTH, COOKIES } from '../../src/lib/customer-auth-shared';
 import {
+  CUSTOMER_AUTH,
+  COOKIES,
   parseCookies,
   clearCookie,
   callTokenEndpoint,

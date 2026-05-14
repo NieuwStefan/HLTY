@@ -250,7 +250,7 @@ groen. **Nog niet gepusht** — wachten op bundeling met volgende punten.
 **Verifieerd:** vendor toont nu echte merknaam ("HLTY", "FITTERGY", etc.) en
 lange productnamen wrappen netjes op 2 regels.
 
-**Status:** ✅ Lokaal klaar, push pending.
+**Status:** ✅ Live.
 
 ### ✅ Batch C — Productpagina (punten 17 + 21)
 
@@ -309,7 +309,7 @@ Fysiotherapie & Herstel, Accessoires & Lifestyle). Vraag is wel welke
 productpagina. Op te pakken als aparte verbetering wanneer de overige
 rapport-punten zijn afgehandeld.
 
-**Status:** ✅ Lokaal klaar, push pending.
+**Status:** ✅ Live.
 
 ### ✅ Batch B — Homepage Hero (punten 8 + 9 + 23) + nieuwe /alle-producten
 
@@ -433,31 +433,34 @@ Productadvisor-fase.
 | # | Cat. | Onderwerp | Status |
 |---|------|-----------|--------|
 | 1 | KRITIEK | Klantenservice-links leeg | ✅ Live |
-| 2 | KRITIEK | Account/login leeg | ✅ Lokaal klaar, push pending |
+| 2 | KRITIEK | Account/login leeg | ✅ Live |
 | 3 | BUG | Productadvisor "STAP 0 VAN 3" | ⏭ Eigen fase |
 | 4 | BUG | Browsertab — generieke titel | ⏭ Eigen SEO/GEO-fase |
 | 5 | BUG | Productadvisor "Bekijk mijn advies" op stap 2 | ⏭ Eigen fase |
-| 6 | BUG | Bewaarvoorschrift afgebroken zin | ⏳ Batch A |
-| 7 | BUG | ESN voetnootmarkeringen zonder definities | ⏳ Batch A |
-| 8 | UX | Hero CTA's beide naar vitamines | ✅ Lokaal klaar, push pending |
-| 9 | UX | Hero-afbeelding grijs placeholder | ✅ Lokaal klaar, push pending |
+| 6 | BUG | Bewaarvoorschrift afgebroken zin | ⏳ Batch A (Shopify admin) |
+| 7 | BUG | ESN voetnootmarkeringen zonder definities | ⏳ Batch A (Shopify admin) |
+| 8 | UX | Hero CTA's beide naar vitamines | ✅ Live |
+| 9 | UX | Hero-afbeelding grijs placeholder | ✅ Live |
 | 10 | UX | Merken dropdown te lang | ⏳ Batch E |
 | 11 | UX | Sticky nav overlapt producttitel | ⏳ Batch E |
-| 12 | UX | Productnamen afgekapt in cart drawer | ✅ Lokaal klaar, push pending |
+| 12 | UX | Productnamen afgekapt in cart drawer | ✅ Live |
 | 13 | UX | Geen checkout progress-indicator | ⏳ Solo (onderzoek) |
 | 14 | UX | Geen autocomplete in zoekmodal | ⏳ Solo (feature) |
-| 15 | CONTENT | "FITTERG" afgekapt in cart | ✅ Lokaal klaar, push pending |
-| 16 | CONTENT | "by fittergy" dubbel | ⏳ Batch A |
-| 17 | CONTENT | "Ingredienten" zonder trema | ✅ Lokaal klaar, push pending |
-| 18 | CONTENT | Orthica spatie ontbreekt | ⏳ Batch A |
-| 19 | CONTENT | "buiten bereik" kleine letter | ⏳ Batch A |
-| 20 | CONTENT | ".00" in productnamen sitebreed | ⏳ Batch A |
-| 21 | CONTENT | Breadcrumb mist collectie-niveau | ✅ Lokaal klaar, push pending |
-| 22 | COPY | Fysiotherapie vs Fysiotherapie & Herstel | ⏳ |
-| 23 | COPY | Dubbele hero & advisor kop | ✅ Lokaal klaar, push pending |
-| 24 | COPY | marketing-hypes vs marketingverhalen | ⏳ |
-| 25 | URL | kruiden-planten-2 URL | ⏳ |
+| 15 | CONTENT | "FITTERG" afgekapt in cart | ✅ Live |
+| 16 | CONTENT | "by fittergy" dubbel | ⏳ Batch A (Shopify admin) |
+| 17 | CONTENT | "Ingredienten" zonder trema | ✅ Live |
+| 18 | CONTENT | Orthica spatie ontbreekt | ⏳ Batch A (Shopify admin) |
+| 19 | CONTENT | "buiten bereik" kleine letter | ⏳ Batch A (Shopify admin) |
+| 20 | CONTENT | ".00" in productnamen sitebreed | ⏳ Batch A (Shopify admin) |
+| 21 | CONTENT | Breadcrumb mist collectie-niveau | ✅ Live |
+| 22 | COPY | Fysiotherapie vs Fysiotherapie & Herstel | ⏳ Batch E |
+| 23 | COPY | Dubbele hero & advisor kop | ✅ Live |
+| 24 | COPY | marketing-hypes vs marketingverhalen | ⏳ Batch E |
+| 25 | URL | kruiden-planten-2 URL | ⏳ Batch A (Shopify admin) |
 | 26 | URL | Klantenservice-links naar checkout-subdomein | ✅ Live (deel van punt 1) |
+
+**Voortgang:** 12 van 26 punten live (46%); 3 punten doorgeschoven naar
+eigen fases; 11 punten in resterende batches.
 
 ---
 
@@ -535,13 +538,36 @@ leggen.
 
 ## 9. Volgende stap
 
-**Batch B — Homepage Hero**: punten 8, 9 en 23. Drie issues die alle de
-hero-sectie raken:
+Live op productie (commit `5794949` op `main`, Vercel auto-deploy):
+- Batches B, C, D + Punt 2 + categorie-filter in sidebar + Checkbox-styling
 
-- #8 Twee CTA-knoppen ('Ontdek producten' + 'Bekijk alle producten') linken
-  beide naar `/collectie/vitamines-1`
-- #9 Hero-afbeelding toont grijs placeholder bij eerste laden
-- #23 Hero ("Welk supplement past bij jou?") en Productadvisor-sectie
-  hebben identieke kop
+**Eerstvolgende actie — Batch A (Shopify admin)**
 
-Mogelijk één pass in [src/pages/Home.tsx](../src/pages/Home.tsx).
+Stefan handelt de volgende punten af in Shopify admin op niet-HLTY
+producten. Belangrijk: Holland Pharma overschrijft Shopify-aanpassingen
+bij volgende sync (zie § 2b) — dus voor sommige items is een
+**presentatie-laag-fix** mogelijk de betere oplossing dan handmatig in
+admin werken. Per punt te beoordelen:
+
+| # | Onderwerp | Aanpak |
+|---|-----------|--------|
+| 6 | Bewaarvoorschrift afgebroken zin (Holland Pharma) | Code-fix (presentatie-laag) zoals #17 — TITLE_OVERRIDE of regex |
+| 7 | ESN voetnootmarkeringen ¹³ zonder definities | Code-fix (regex om dangling superscripts te strippen) of ESN-specifieke override |
+| 16 | "by fittergy" dubbel in titel | Code-fix in productnaam-rendering OF Stefan in Shopify (overschrijfbaar) |
+| 18 | Orthica "10 jaar.Bevat" mist spatie | Code-fix (regex `\.([A-Z])` → `. $1`) |
+| 19 | "buiten bereik" zonder hoofdletter | Code-fix (capitalize-eerste-letter in bullet-rendering) |
+| 20 | ".00" in productnamen sitebreed | Code-fix (regex `\.00\s` → ' ') in title-display helper |
+| 25 | `/collectie/kruiden-planten-2` URL (`-2` ipv `-1`) | Stefan in Shopify — collection-handle is custom, niet door HP gemanaged |
+
+Daarna **Batch E (sitewide consistentie)**: #10 merken-dropdown te lang,
+#11 sticky nav overlapt producttitel, #22 Fysiotherapie-copy
+inconsistentie, #24 marketing-hypes vs -verhalen.
+
+**Volgorde-afspraak met Stefan:**
+1. ⏳ Batch A — Shopify-data fixes (deels code, deels admin)
+2. ⏳ Batch E — Sitewide consistentie
+3. ⏳ Solo #14 — Zoekmodal autocomplete (eigen feature)
+4. ⏳ Solo #13 — Checkout indicator (onderzoek, mogelijk niets te doen)
+5. ⏭ Eigen Fase 7+ — Productadvisor (#3, #5 + Stefan's extra issues)
+6. ⏭ Eigen Fase 8 — SEO & GEO (#4 meta-titels + Open Graph + structured data)
+7. ⏭ Wishlist — Merken-pagina inrichting (open punt, samen oppakken)

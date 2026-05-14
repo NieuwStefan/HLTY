@@ -130,7 +130,7 @@ export default function Home() {
                   transition={{ delay: 0.5 }}
                   className="mt-8 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4"
                 >
-                  <Link to="/collectie/vitamines-1" className="btn-primary px-7 py-3.5 text-sm gap-2">
+                  <Link to="/alle-producten" className="btn-primary px-7 py-3.5 text-sm gap-2">
                     Ontdek producten
                     <ArrowRight className="w-4 h-4" />
                   </Link>
@@ -158,6 +158,8 @@ export default function Home() {
                   src="/images/hlty-banner.png"
                   alt="HLTY — geselecteerd door fysiotherapeuten"
                   className="relative w-full max-w-[560px] h-auto object-contain block"
+                  loading="eager"
+                  fetchPriority="high"
                 />
               </motion.div>
             </div>
@@ -363,7 +365,7 @@ export default function Home() {
             </div>
 
             <div className="mt-8">
-              <Link to="/collectie/vitamines-1" className="btn-primary px-8 py-4 text-sm gap-2">
+              <Link to="/alle-producten" className="btn-primary px-8 py-4 text-sm gap-2">
                 Bekijk alle producten
                 <ArrowRight className="w-4 h-4" />
               </Link>

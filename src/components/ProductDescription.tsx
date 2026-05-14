@@ -32,6 +32,7 @@ const TITLE_OVERRIDES: { match: RegExp; label: string }[] = [
   { match: /^verantwoordelijk voor/i, label: 'Fabrikant / Distributeur' },
   { match: /^distributeur$/i, label: 'Fabrikant / Distributeur' },
   { match: /^fabrikant$/i, label: 'Fabrikant / Distributeur' },
+  { match: /^ingredi[eë]nten/i, label: 'Ingrediënten' },
 ];
 
 function normalizeTitle(raw: string): string {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, Check, Plus, Minus, Loader2 } from 'lucide-react';
 import {
@@ -15,6 +15,15 @@ import ProductCard from '../components/ProductCard';
 import ProductDescription from '../components/ProductDescription';
 import BrandSection from '../components/BrandSection';
 import { getBrand } from '../data/brands';
+import { findPrimaryCategory } from '../lib/categories';
+
+interface ProductLocationState {
+  from?: {
+    type: 'collection' | 'brand';
+    handle: string;
+    title: string;
+  };
+}
 
 const HIDDEN_TAG_PREFIXES = ['DOEL-', 'INGR-', 'BEWUST-', 'BTW'];
 
@@ -26,6 +35,7 @@ function isVisibleTag(tag: string): boolean {
 
 export default function Product() {
   const { handle } = useParams<{ handle: string }>();
+  const location = useLocation();
   const { addItem, isLoading } = useCart();
   const [product, setProduct] = useState<ProductType | null>(null);
   const [recommendations, setRecommendations] = useState<ProductType[]>([]);
@@ -120,6 +130,24 @@ export default function Product() {
   const brandHandle = brandSlug(product.vendor || '');
   const brand = brandHandle ? getBrand(brandHandle) : null;
 
+  // Breadcrumb: gebruik herkomst-state als die er is, anders fallback op
+  // primary-category-whitelist. Bij brand-herkomst geen tussenniveau tonen
+  // (anders wordt het Home / Brand / Brand / Product).
+  const locationState = (location.state ?? null) as ProductLocationState | null;
+  const fromCollection =
+    locationState?.from?.type === 'collection' ? locationState.from : null;
+  const fromBrand = locationState?.from?.type === 'brand';
+  // Breadcrumb-tussenniveau (categorie): toon alleen als klant van een
+  // collectie komt of bij directe URL (whitelist-fallback). Bij brand-
+  // herkomst geen tussenniveau (Brand is al de breadcrumb-context).
+  let breadcrumbCategory: { handle: string; label: string } | null = null;
+  if (fromCollection) {
+    breadcrumbCategory = { handle: fromCollection.handle, label: fromCollection.title };
+  } else if (!fromBrand) {
+    const fb = findPrimaryCategory(product.collections ?? []);
+    if (fb) breadcrumbCategory = { handle: fb.handle, label: fb.label };
+  }
+
   return (
     <>
       <div className="mx-auto max-w-[1400px] px-4 space-y-16">
@@ -129,6 +157,17 @@ export default function Product() {
             Home
           </Link>
           <span>/</span>
+          {breadcrumbCategory && (
+            <>
+              <Link
+                to={`/collectie/${breadcrumbCategory.handle}`}
+                className="hover:text-[var(--color-navy)] transition-colors"
+              >
+                {breadcrumbCategory.label}
+              </Link>
+              <span>/</span>
+            </>
+          )}
           {brandHandle && (
             <>
               <Link

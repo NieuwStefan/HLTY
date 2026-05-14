@@ -28,6 +28,7 @@ import { useCustomer, type Customer, type CustomerAddress } from '../context/Cus
 import { useCart } from '../context/CartContext';
 import { validatePhone, validateZip, validateRequired, normalizeZip } from '../lib/validators';
 import { COUNTRIES, countryName } from '../lib/countries';
+import Checkbox from '../components/Checkbox';
 
 interface OrderLineItem {
   title: string;
@@ -1240,13 +1241,8 @@ function AddressEditor({
       </div>
 
       {!isDefault && (
-        <label className="flex items-center gap-2 mt-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={setAsDefault}
-            onChange={(e) => setSetAsDefault(e.target.checked)}
-            className="rounded"
-          />
+        <label className="flex items-center gap-2.5 mt-3 cursor-pointer">
+          <Checkbox checked={setAsDefault} onChange={setSetAsDefault} />
           <span className="text-xs text-[var(--color-navy)]/80">Als standaard adres instellen</span>
         </label>
       )}

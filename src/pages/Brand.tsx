@@ -126,7 +126,12 @@ export default function Brand() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {products.map((product, i) => (
-            <ProductCard key={product.id} product={product} index={i} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              index={i}
+              from={{ type: 'brand', handle: brand.handle, title: brand.name }}
+            />
           ))}
         </div>
       )}

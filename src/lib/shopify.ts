@@ -34,6 +34,7 @@ export interface Product {
   tags: string[];
   images: ShopifyImage[];
   variants: ProductVariant[];
+  collections: { handle: string; title: string }[];
   priceRange: {
     minVariantPrice: Money;
     maxVariantPrice: Money;
@@ -52,7 +53,7 @@ export interface CartLine {
   id: string;
   quantity: number;
   merchandise: ProductVariant & {
-    product: { title: string; handle: string };
+    product: { title: string; handle: string; vendor: string };
   };
   cost: { totalAmount: Money };
 }
@@ -141,6 +142,7 @@ function reshapeProduct(node: any): Product {
     ...node,
     images: reshapeImages(node.images),
     variants: reshapeVariants(node.variants),
+    collections: node.collections?.edges?.map((e: any) => e.node) ?? [],
   };
 }
 
@@ -175,6 +177,9 @@ const PRODUCT_FRAGMENT = `
         }
       }
     }
+    collections(first: 10) {
+      edges { node { handle title } }
+    }
     priceRange {
       minVariantPrice { amount currencyCode }
       maxVariantPrice { amount currencyCode }
@@ -205,6 +210,9 @@ const PRODUCT_CARD_FRAGMENT = `
         }
       }
     }
+    collections(first: 20) {
+      edges { node { handle title } }
+    }
     priceRange {
       minVariantPrice { amount currencyCode }
       maxVariantPrice { amount currencyCode }
@@ -230,7 +238,7 @@ const CART_FRAGMENT = `
               availableForSale
               image { url altText }
               selectedOptions { name value }
-              product { title handle }
+              product { title handle vendor }
             }
           }
           cost { totalAmount { amount currencyCode } }
@@ -280,6 +288,26 @@ export async function getProducts(first = 24, after?: string): Promise<ProductLi
   };
   cacheSet(key, result, TTL.PRODUCTS);
   return result;
+}
+
+/** Fetch every product in the catalog by paginating internally.
+ *  Page size 250 = Shopify Storefront API max. Designed for the
+ *  /alle-producten page where we client-side filter via category-tiles. */
+export async function getAllProducts(): Promise<Product[]> {
+  const cacheKey = 'all-products';
+  const cached = cacheGet<Product[]>(cacheKey);
+  if (cached) return cached;
+
+  const all: Product[] = [];
+  let after: string | undefined = undefined;
+  while (true) {
+    const res: ProductListResult = await getProducts(250, after);
+    all.push(...res.products);
+    if (!res.pageInfo.hasNextPage) break;
+    after = res.pageInfo.endCursor;
+  }
+  cacheSet(cacheKey, all, TTL.PRODUCTS);
+  return all;
 }
 
 export async function getProduct(handle: string): Promise<Product> {

@@ -129,10 +129,12 @@ export default function CartDrawer() {
 
                         {/* Details */}
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-primary)]">
-                            {line.merchandise.product.title.split(' | ')[0]?.slice(0, 30)}
-                          </p>
-                          <h4 className="text-sm font-semibold text-[var(--color-navy)] truncate mt-0.5">
+                          {line.merchandise.product.vendor && (
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-primary)]">
+                              {line.merchandise.product.vendor}
+                            </p>
+                          )}
+                          <h4 className="text-sm font-semibold text-[var(--color-navy)] line-clamp-2 mt-0.5">
                             {line.merchandise.product.title}
                           </h4>
                           <p className="text-sm font-bold text-[var(--color-navy)] mt-1">

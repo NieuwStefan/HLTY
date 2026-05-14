@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { getAllCollectionProducts, getProductCategories, sortByBrandRelevance, type Product, type Collection as CollectionType } from '../lib/shopify';
+import { handlesForMainsAndSubs, productMatchesHandles } from '../lib/product-categories';
 import ProductCard from '../components/ProductCard';
 import FilterSidebar from '../components/FilterSidebar';
 
@@ -28,6 +29,8 @@ export default function Collection() {
   const [selectedDiets, setSelectedDiets] = useState<string[]>([]);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [sortBy, setSortBy] = useState<SortKey>('recommended');
+  const [selectedMainCategories, setSelectedMainCategories] = useState<string[]>([]);
+  const [selectedSubCategories, setSelectedSubCategories] = useState<string[]>([]);
 
   useEffect(() => {
     if (!handle) return;
@@ -84,7 +87,7 @@ export default function Collection() {
    * would remain if the user ticked that option, given all *other* active filters.
    * So when computing counts for section X, we exclude X itself.
    */
-  type FilterKey = 'brand' | 'ingredient' | 'diet' | 'stock';
+  type FilterKey = 'brand' | 'ingredient' | 'diet' | 'stock' | 'category';
   const applyFilters = (input: Product[], skip?: FilterKey) => {
     let r = input;
     if (selectedCategories.length > 0) {
@@ -92,6 +95,12 @@ export default function Collection() {
         const keys = productCategoryKeys.get(p.id) ?? [];
         return keys.some((k) => selectedCategories.includes(k));
       });
+    }
+    if (skip !== 'category') {
+      const allowed = handlesForMainsAndSubs(selectedMainCategories, selectedSubCategories);
+      if (allowed.length > 0) {
+        r = r.filter((p) => productMatchesHandles(p.collections ?? [], allowed));
+      }
     }
     if (skip !== 'brand' && selectedBrands.length > 0) {
       r = r.filter((p) => selectedBrands.includes(p.vendor));
@@ -118,7 +127,8 @@ export default function Collection() {
 
   const filteredProducts = useMemo(
     () => applyFilters(products),
-    [products, productCategoryKeys, selectedCategories, selectedBrands, selectedIngredients, selectedDiets, inStockOnly]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [products, productCategoryKeys, selectedCategories, selectedBrands, selectedIngredients, selectedDiets, inStockOnly, selectedMainCategories, selectedSubCategories]
   );
 
   // Candidate sets for live counts: products matching every filter except the section's own.
@@ -128,8 +138,10 @@ export default function Collection() {
       ingredient: applyFilters(products, 'ingredient'),
       diet: applyFilters(products, 'diet'),
       stock: applyFilters(products, 'stock'),
+      category: applyFilters(products, 'category'),
     }),
-    [products, productCategoryKeys, selectedCategories, selectedBrands, selectedIngredients, selectedDiets, inStockOnly]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [products, productCategoryKeys, selectedCategories, selectedBrands, selectedIngredients, selectedDiets, inStockOnly, selectedMainCategories, selectedSubCategories]
   );
 
   const sortedProducts = useMemo(() => {
@@ -154,7 +166,7 @@ export default function Collection() {
   // Reset visible count when filters or sort change so user starts fresh
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [selectedCategories, selectedBrands, selectedIngredients, selectedDiets, inStockOnly, sortBy]);
+  }, [selectedCategories, selectedBrands, selectedIngredients, selectedDiets, inStockOnly, sortBy, selectedMainCategories, selectedSubCategories]);
 
   const toggleCategory = (key: string) => {
     setSelectedCategories((prev) =>
@@ -215,6 +227,8 @@ export default function Collection() {
     setSelectedCategories([]);
     setSelectedDiets([]);
     setInStockOnly(false);
+    setSelectedMainCategories([]);
+    setSelectedSubCategories([]);
   };
 
   if (loading) {
@@ -339,6 +353,11 @@ export default function Collection() {
           onInStockChange={setInStockOnly}
           onClear={clearFilters}
           dietOptions={DIET_OPTIONS}
+          showCategoryFilter
+          selectedMainCategories={selectedMainCategories}
+          selectedSubCategories={selectedSubCategories}
+          onMainCategoriesChange={setSelectedMainCategories}
+          onSubCategoriesChange={setSelectedSubCategories}
         />
       </div>
 
@@ -359,6 +378,11 @@ export default function Collection() {
             onInStockChange={setInStockOnly}
             onClear={clearFilters}
             dietOptions={DIET_OPTIONS}
+            showCategoryFilter
+            selectedMainCategories={selectedMainCategories}
+            selectedSubCategories={selectedSubCategories}
+            onMainCategoriesChange={setSelectedMainCategories}
+            onSubCategoriesChange={setSelectedSubCategories}
           />
         </div>
 
@@ -405,7 +429,16 @@ export default function Collection() {
 
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {visibleProducts.map((product, i) => (
-                  <ProductCard key={product.id} product={product} index={i} />
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    index={i}
+                    from={
+                      collection
+                        ? { type: 'collection', handle: collection.handle, title: collection.title }
+                        : undefined
+                    }
+                  />
                 ))}
               </div>
 

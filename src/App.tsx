@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CustomerProvider } from './context/CustomerContext';
 import { CartProvider } from './context/CartContext';
@@ -16,6 +16,8 @@ import Brand from './pages/Brand';
 import Welcome from './pages/Welcome';
 import Policy from './pages/Policy';
 import Contact from './pages/Contact';
+import NotFound from './pages/NotFound';
+import AllProducts from './pages/AllProducts';
 
 const pageTransition = {
   initial: { opacity: 0, y: 8 },
@@ -52,6 +54,16 @@ export default function App() {
                   <Route path="/auth/callback" element={<AuthCallback />} />
                   <Route path="/beleid/:slug" element={<Policy />} />
                   <Route path="/contact" element={<Contact />} />
+                  <Route path="/alle-producten" element={<AllProducts />} />
+
+                  {/* Shopify-legacy URLs → eigen routes */}
+                  <Route path="/account/login" element={<Navigate to="/account" replace />} />
+                  <Route path="/account/register" element={<Navigate to="/account" replace />} />
+                  <Route path="/account/orders" element={<Navigate to="/account" replace />} />
+                  <Route path="/pages/contact" element={<Navigate to="/contact" replace />} />
+
+                  {/* Catch-all 404 */}
+                  <Route path="*" element={<NotFound />} />
                 </Routes>
               </motion.div>
             </AnimatePresence>

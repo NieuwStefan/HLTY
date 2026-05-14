@@ -2,6 +2,14 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, X, SlidersHorizontal, Plus, Minus } from 'lucide-react';
 import type { Product } from '../lib/shopify';
+import Checkbox from './Checkbox';
+import {
+  MAIN_CATEGORIES,
+  getMainCategory,
+  handlesForMain,
+  handlesForSubs,
+  productMatchesHandles,
+} from '../lib/product-categories';
 
 const VISIBLE_ITEMS = 6;
 
@@ -21,6 +29,7 @@ interface FilterSidebarProps {
     ingredient: Product[];
     diet: Product[];
     stock: Product[];
+    category?: Product[];
   };
   selectedBrands: string[];
   selectedIngredients: string[];
@@ -32,6 +41,13 @@ interface FilterSidebarProps {
   onInStockChange: (v: boolean) => void;
   onClear: () => void;
   dietOptions: { key: string; label: string; test: (tags: string[]) => boolean }[];
+
+  // Optionele categorie-filter (niet aanwezig op alle pagina's)
+  showCategoryFilter?: boolean;
+  selectedMainCategories?: string[];
+  selectedSubCategories?: string[];
+  onMainCategoriesChange?: (mains: string[]) => void;
+  onSubCategoriesChange?: (subs: string[]) => void;
 }
 
 function FilterSection({
@@ -85,13 +101,8 @@ function CheckboxItem({
   onChange: () => void;
 }) {
   return (
-    <label className="flex items-center gap-2 py-1 px-1 rounded-lg cursor-pointer hover:bg-black/[0.03] transition-colors group">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onChange}
-        className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] accent-[var(--color-primary)] cursor-pointer"
-      />
+    <label className="flex items-center gap-2.5 py-1 px-1 rounded-lg cursor-pointer hover:bg-black/[0.03] transition-colors group">
+      <Checkbox checked={checked} onChange={() => onChange()} />
       <span className="text-sm text-[var(--color-navy)] flex-1 truncate group-hover:text-[var(--color-primary)] transition-colors">
         {label}
       </span>
@@ -113,6 +124,11 @@ export default function FilterSidebar({
   onInStockChange,
   onClear,
   dietOptions,
+  showCategoryFilter = false,
+  selectedMainCategories = [],
+  selectedSubCategories = [],
+  onMainCategoriesChange,
+  onSubCategoriesChange,
 }: FilterSidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [brandsExpanded, setBrandsExpanded] = useState(false);
@@ -121,7 +137,65 @@ export default function FilterSidebar({
     selectedBrands.length > 0 ||
     selectedIngredients.length > 0 ||
     selectedDiets.length > 0 ||
-    inStockOnly;
+    inStockOnly ||
+    selectedMainCategories.length > 0 ||
+    selectedSubCategories.length > 0;
+
+  // Categorie-counts: aantal producten in het facet-set dat in elke main valt
+  const mainCounts = useMemo(() => {
+    const candidates = facetProducts.category ?? products;
+    return MAIN_CATEGORIES.map((main) => {
+      const handles = handlesForMain(main.id);
+      const count = candidates.filter((p) =>
+        productMatchesHandles(p.collections ?? [], handles),
+      ).length;
+      return { main, count };
+    });
+  }, [facetProducts.category, products]);
+
+  const toggleMain = (mainId: string) => {
+    if (!onMainCategoriesChange) return;
+    const next = selectedMainCategories.includes(mainId)
+      ? selectedMainCategories.filter((m) => m !== mainId)
+      : [...selectedMainCategories, mainId];
+    onMainCategoriesChange(next);
+    // Bij uitzetten van een main: ook diens subs verwijderen
+    if (selectedMainCategories.includes(mainId) && onSubCategoriesChange) {
+      const main = getMainCategory(mainId);
+      if (main) {
+        const subIdsToRemove = new Set(main.subs.map((s) => s.id));
+        onSubCategoriesChange(
+          selectedSubCategories.filter((s) => !subIdsToRemove.has(s)),
+        );
+      }
+    }
+  };
+
+  const toggleSub = (subId: string) => {
+    if (!onSubCategoriesChange) return;
+    onSubCategoriesChange(
+      selectedSubCategories.includes(subId)
+        ? selectedSubCategories.filter((s) => s !== subId)
+        : [...selectedSubCategories, subId],
+    );
+  };
+
+  // Sub-counts per main: hoeveel producten matchen een specifieke sub
+  const subCountsByMain = useMemo(() => {
+    const candidates = facetProducts.category ?? products;
+    const map = new Map<string, Map<string, number>>();
+    for (const main of MAIN_CATEGORIES) {
+      const inner = new Map<string, number>();
+      for (const sub of main.subs) {
+        const count = candidates.filter((p) =>
+          productMatchesHandles(p.collections ?? [], handlesForSubs(main.id, [sub.id])),
+        ).length;
+        inner.set(sub.id, count);
+      }
+      map.set(main.id, inner);
+    }
+    return map;
+  }, [facetProducts.category, products]);
 
   const brands = useMemo(() => {
     const map = new Map<string, number>();
@@ -201,6 +275,44 @@ export default function FilterSidebar({
         </button>
       )}
 
+      {showCategoryFilter && (
+        <FilterSection title="Categorie">
+          {/* Hoofdcategorieën */}
+          {mainCounts.map(({ main, count }) => (
+            <CheckboxItem
+              key={main.id}
+              label={main.label}
+              count={count}
+              checked={selectedMainCategories.includes(main.id)}
+              onChange={() => toggleMain(main.id)}
+            />
+          ))}
+
+          {/* Sub-categorieën per geselecteerde main */}
+          {selectedMainCategories.map((mainId) => {
+            const main = getMainCategory(mainId);
+            if (!main) return null;
+            const counts = subCountsByMain.get(mainId);
+            return (
+              <div key={mainId} className="mt-3 pl-3 border-l-2 border-[var(--color-primary)]/30">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-muted)] mb-1.5">
+                  Binnen {main.label}
+                </p>
+                {main.subs.map((sub) => (
+                  <CheckboxItem
+                    key={sub.id}
+                    label={sub.label}
+                    count={counts?.get(sub.id) ?? 0}
+                    checked={selectedSubCategories.includes(sub.id)}
+                    onChange={() => toggleSub(sub.id)}
+                  />
+                ))}
+              </div>
+            );
+          })}
+        </FilterSection>
+      )}
+
       {brands.length > 0 && (
         <FilterSection title="Merk">
           {(brandsExpanded ? brands : brands.slice(0, VISIBLE_ITEMS)).map(([brand, count]) => (
@@ -233,20 +345,12 @@ export default function FilterSidebar({
 
       {hasOutOfStock && (
         <FilterSection title="Beschikbaarheid">
-          <label className="flex items-center gap-2 py-1 px-1 rounded-lg cursor-pointer hover:bg-black/[0.03] transition-colors group">
-            <input
-              type="checkbox"
-              checked={inStockOnly}
-              onChange={(e) => onInStockChange(e.target.checked)}
-              className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] accent-[var(--color-primary)] cursor-pointer"
-            />
-            <span className="text-sm text-[var(--color-navy)] flex-1 truncate group-hover:text-[var(--color-primary)] transition-colors">
-              Alleen op voorraad
-            </span>
-            <span className="text-xs text-[var(--color-muted)] tabular-nums">
-              {inStockCount}
-            </span>
-          </label>
+          <CheckboxItem
+            label="Alleen op voorraad"
+            count={inStockCount}
+            checked={inStockOnly}
+            onChange={() => onInStockChange(!inStockOnly)}
+          />
         </FilterSection>
       )}
 

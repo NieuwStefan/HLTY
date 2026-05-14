@@ -13,6 +13,7 @@ besloten, wat is gedaan en waarom.
 | 03 | [03-fase-3-checkout-finishing.md](./03-fase-3-checkout-finishing.md) | Fase 3 — Checkout pre-fill + order-detail-modal + re-order | ✅ afgerond |
 | 04 | [04-fase-4-profile-edit.md](./04-fase-4-profile-edit.md) | Fase 4 — Eigen profile-edit UI (vervangt link-naar-Shopify in Profiel-tab) | ✅ afgerond |
 | 05 | [05-fase-5-checkout-privacy.md](./05-fase-5-checkout-privacy.md) | Fase 5 — Checkout-privacy fix + UX-polishing (cart-unbind, OIDC id_token, onboarding-flow, NAAM-card, switch-user, F6.1 logo-redirect) | ✅ afgerond |
+| 06 | [06-fase-6-rapport-websitetest.md](./06-fase-6-rapport-websitetest.md) | Fase 6 — AI-websitetest: 26 bevindingen systematisch afwerken (Klantenservice-pagina's, 404-route, meta-titels, content-fixes, URL-cleanup) | 🟡 lopend |
 
 ## Conventies voor verslagen
 

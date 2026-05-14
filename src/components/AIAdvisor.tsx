@@ -320,9 +320,9 @@ export default function AIAdvisor() {
               className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-[1.05]"
               style={{ fontFamily: 'Montserrat, sans-serif' }}
             >
-              Welk supplement
+              Persoonlijk
               <br />
-              <span className="text-[var(--color-primary)]">past bij jou?</span>
+              <span className="text-[var(--color-primary)]">supplementadvies</span>
             </h2>
 
             <p className="mt-5 text-white/60 text-base leading-relaxed max-w-md">

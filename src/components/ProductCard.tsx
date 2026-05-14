@@ -4,12 +4,19 @@ import { ShoppingBag } from 'lucide-react';
 import { type Product, formatPrice } from '../lib/shopify';
 import { useCart } from '../context/CartContext';
 
+export interface ProductCardFrom {
+  type: 'collection' | 'brand';
+  handle: string;
+  title: string;
+}
+
 interface Props {
   product: Product;
   index?: number;
+  from?: ProductCardFrom;
 }
 
-export default function ProductCard({ product, index = 0 }: Props) {
+export default function ProductCard({ product, index = 0, from }: Props) {
   const { addItem, isLoading } = useCart();
   const image = product.images[0];
   const variant = product.variants[0];
@@ -30,7 +37,11 @@ export default function ProductCard({ product, index = 0 }: Props) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: Math.min(index, 7) * 0.05 }}
     >
-      <Link to={`/product/${product.handle}`} className="block group">
+      <Link
+        to={`/product/${product.handle}`}
+        state={from ? { from } : undefined}
+        className="block group"
+      >
         <div className="card p-0">
           {/* Image */}
           <div className="relative aspect-square bg-white/50 overflow-hidden">

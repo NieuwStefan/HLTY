@@ -240,21 +240,31 @@ bijgewerkt naar `() => Promise<void>`.
 
 ### H3 + H4 — Sessie-mismatch en switch-user
 
-Twee gerelateerde verbeteringen voor de `LoginPrompt`-staat:
+Twee gerelateerde verbeteringen voor de auth-flow:
 
 - **H4 (`?force=1` op `/api/auth/start`)**: een nieuwe query-param
   voegt OIDC `prompt=login` toe aan de OAuth-URL. Daardoor toont
   Shopify altijd opnieuw het e-mailformulier i.p.v. de auto-login
   via z'n customer-account-cookies. `CustomerContext.login()` heeft
-  een nieuwe `force?: boolean`-parameter. De LoginPrompt-component
-  toont een kleine link "Inloggen met een ander account" die dit
-  triggert.
+  een `force?: boolean`-parameter, en er is een aparte
+  `switchUser()`-actie die `unbindStoredCart()` aanroept en daarna
+  via `/api/auth/start?force=1` Shopify dwingt opnieuw te
+  authenticeren.
 - **H3 (auto-trigger via referrer)**: bij mount van LoginPrompt
   controleert een `useEffect` of `document.referrer` op
   `checkout.hlty.shop` of `inlog.hlty.shop` matched. Zo ja → meteen
   `onLogin()` aanroepen. Een gebruiker die net via de checkout-
   Inloggen-link is geweest hoeft op `/account` geen extra klik te
   doen.
+
+**Plek van de switch-user-actie:** een eerste iteratie zette de
+"Inloggen met een ander account"-link onder de Inloggen-knop in de
+uitgelogde view. Tijdens de live-walkthrough viel op dat dit
+verwarrend is — twee knoppen die er nagenoeg hetzelfde uit zien op
+een moment dat de bezoeker nog niet eens ingelogd is. De link is
+daarom verplaatst naar het Dashboard naast de Uitlog-knop, als
+"Wissel van account"-actie. Daar past hij contextueel: wanneer je
+al als account X bent ingelogd en naar Y wilt. Commit `dde2333`.
 
 ### M2 — Cart leegmaken bij account-wissel (geparkeerd)
 
@@ -319,29 +329,79 @@ Alternatieven die zijn overwogen:
 
 ---
 
-## 10. Commits Pad A
+## 10. Commits Fase 5
 
 | Commit | Onderwerp |
 |--------|-----------|
-| `9e75fd8` | Pad A: H5 (Welcome.tsx + route + AuthCallback redirect), H2 (NAAM-card + h1 fresh greeting), M4 (Uitlog spinner), H3+H4 (force-param + switch-user link + referrer auto-trigger) |
-| `d1b03d1` | Fase 5 oorspronkelijke verslag (deze file) |
+| `155c23a` | Cart-unbind bij logout en stale state (Optie B+C op cart-niveau) |
+| `3948df7` | OIDC `id_token` bewaren voor geldige Shopify-logout — hoofdfix voor de privacy-bug |
+| `029102e` | Fase 5 verslag (oorspronkelijk) |
+| `9e75fd8` | Pad A: H5 onboarding-flow + H2 NAAM-card + M4 Uitlog spinner + H3+H4 force/referrer |
+| `1b7eeb2` | Verslag uitgebreid met Pad A items + F6.1 status |
+| `6823fa8` | F6.1 toegepast via Horizon `theme.liquid` redirect |
+| `dde2333` | Switch-user verplaatst van LoginPrompt naar Dashboard (UX-fix uit live-walkthrough) |
 
 ---
 
 ## 11. Volgende stap
 
-Klein:
-- M2 (cart leegmaken bij account-wissel) — als de feedback toch nog komt
-- /welkom volledige runtime-test met een vers account (technisch
-  bevestigd, mist alleen end-to-end visuele check)
-- Bewaak de F6.1 redirect bij toekomstige Horizon-thema-updates: de
-  wijziging in `layout/theme.liquid` zit niet in de repo en kan
-  worden overschreven
+### Klein — kan nu of in een volgende sessie
 
-Groot, zoals genoteerd in [04-fase-4-profile-edit.md § 9](./04-fase-4-profile-edit.md#9-volgende-stap-fase-5):
-- E-mail/telefoon wijzigen via Admin API wrapper — oorspronkelijke
-  Fase 5 onderwerp dat naar een latere fase is geschoven
-- Playwright e2e test-suite — vooral relevant nu de auth-flow met
-  onboarding, switch-user en silent OAuth complex is geworden
-- Optimistic updates in adresboek
-- Nieuwsbrief opt-in via `customerEmailMarketingSubscribe`
+- **/welkom volledige runtime-test** met een vers account.
+  Technisch bevestigd (TS-build groen, alle imports/types kloppen,
+  redirect-logica handmatig gevalideerd voor non-logged-in), maar
+  mist een end-to-end visuele test met een echt nieuw e-mailadres.
+- **M2** — cart leegmaken bij account-wissel. Geparkeerd; toevoegen
+  als gebruikers laten weten dat ze in de war raken van cart-items
+  die "van iemand anders" lijken.
+- **Bewaak F6.1** bij toekomstige Horizon-thema-updates. De
+  redirect-script in `layout/theme.liquid` zit in Shopify-admin,
+  niet in deze repo. Een fresh theme-installatie overschrijft
+  hem. Genoteerd in § 9 F6.1.
+
+### Voor Fase 6 — UX-finetuning
+
+- **Onboarding-tekst aanvullen** in `/welkom`: nu geen uitleg over
+  waarom we deze gegevens vragen. Een korte zin over "we vragen
+  alleen wat je nodig hebt om af te rekenen" zou helpen.
+- **Cart-icoon "verwarrend leftover items"**: gerelateerd aan M2,
+  optioneel een toast/banner "Je vorige winkelwagen is bewaard" bij
+  eerste post-login pageload.
+- **Logout-flow visuele continuity**: tussen klik op Uitloggen en
+  landing op `/` is er nog een kort flikkering door de Shopify
+  logout-redirect. Een eenvoudige tussen-pagina ipv direct 302 zou
+  schoner zijn.
+
+### Groot — Fase 7+
+
+Zoals genoteerd in [04-fase-4-profile-edit.md § 9](./04-fase-4-profile-edit.md#9-volgende-stap-fase-5):
+
+- **E-mail en telefoon wijzigen via Shopify Admin API wrapper**.
+  Oorspronkelijk Fase 5 doel, doorgeschoven omdat de privacy-bug
+  prioriteit kreeg. Vereist een Custom App in Shopify met
+  `write_customers` scope, een Admin-token in Vercel env-var, en
+  een server-route die strict de klant-ID matched aan de
+  ingelogde shcat_-token. Schatting 3-4 uur.
+- **Playwright e2e test-suite**. De auth-flow heeft nu zoveel
+  paden (login, logout, switch-user, /welkom, silent OAuth bij
+  referrer, cart-unbind, id_token-flow) dat handmatig testen bij
+  elke wijziging zwaar wordt. Schatting 4-6 uur.
+- **Optimistic updates in adresboek**. Verwijderen/toevoegen voelt
+  nu traag (~500-1500 ms) door de `useCustomer().refresh()`-call.
+- **Nieuwsbrief opt-in** via
+  `customerEmailMarketingSubscribe` mutation, in onboarding én
+  Profiel-tab.
+
+### Architectuur-aandachtspunten
+
+- **Theme-code in Shopify versus repo**: de F6.1-redirect leeft
+  buiten de repo. Bij meer van zulke ingrepen in de toekomst is
+  het de moeite waard om een "Shopify theme overlay" patroon te
+  overwegen — bv. periodiek de Horizon-thema-code exporteren en in
+  een aparte directory in de repo bewaren, zodat we wijzigingen
+  reproduceerbaar in de hand hebben.
+- **Customer Account API limieten**: e-mail/telefoon zijn de
+  bekendste, maar er kunnen ook beperkingen zijn die we nog niet
+  zijn tegengekomen (b.v. retour-aanvragen, kortingscodes, store
+  credit). Bij scope-uitbreiding altijd eerst introspectie doen
+  zoals in [04 § 5.1](./04-fase-4-profile-edit.md#51-schema-introspectie-eerst).

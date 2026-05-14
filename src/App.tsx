@@ -14,6 +14,8 @@ import Account from './pages/Account';
 import AuthCallback from './pages/AuthCallback';
 import Brand from './pages/Brand';
 import Welcome from './pages/Welcome';
+import Policy from './pages/Policy';
+import Contact from './pages/Contact';
 
 const pageTransition = {
   initial: { opacity: 0, y: 8 },
@@ -48,6 +50,8 @@ export default function App() {
                   <Route path="/account" element={<Account />} />
                   <Route path="/welkom" element={<Welcome />} />
                   <Route path="/auth/callback" element={<AuthCallback />} />
+                  <Route path="/beleid/:slug" element={<Policy />} />
+                  <Route path="/contact" element={<Contact />} />
                 </Routes>
               </motion.div>
             </AnimatePresence>

@@ -1,7 +1,5 @@
-import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, MapPin } from 'lucide-react';
-import { getMenu, type Menu } from '../lib/shopify';
 
 const CATEGORY_LINKS = [
   { label: 'Vitamines', href: '/collectie/vitamines-1' },
@@ -19,13 +17,17 @@ const GOAL_LINKS = [
   { label: 'Balans', href: '/collectie/balans' },
 ];
 
+const SERVICE_LINKS = [
+  { label: 'Verzendbeleid', href: '/beleid/verzending' },
+  { label: 'Retour- en terugbetalingsbeleid', href: '/beleid/retour' },
+  { label: 'Servicevoorwaarden', href: '/beleid/voorwaarden' },
+  { label: 'Privacyverklaring', href: '/beleid/privacy' },
+  { label: 'Contactgegevens', href: '/beleid/contact-informatie' },
+  { label: 'Wettelijke kennisgeving', href: '/beleid/wettelijke-kennisgeving' },
+  { label: 'Contact', href: '/contact' },
+];
+
 export default function Footer() {
-  const [footerMenu, setFooterMenu] = useState<Menu | null>(null);
-
-  useEffect(() => {
-    getMenu('footer').then(setFooterMenu).catch(console.error);
-  }, []);
-
   return (
     <footer className="mt-20">
       <div className="glass-dark rounded-t-[32px]">
@@ -85,22 +87,17 @@ export default function Footer() {
               </ul>
             </div>
 
-            {/* Klantenservice (from Shopify footer menu) */}
+            {/* Klantenservice */}
             <div>
               <h4 className="text-xs font-bold uppercase tracking-widest text-white/40 mb-4">
                 Klantenservice
               </h4>
               <ul className="space-y-2.5">
-                {footerMenu?.items.map((item) => (
-                  <li key={item.id}>
-                    <a
-                      href={item.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-white/60 hover:text-white transition-colors"
-                    >
-                      {item.title}
-                    </a>
+                {SERVICE_LINKS.map((link) => (
+                  <li key={link.label}>
+                    <Link to={link.href} className="text-sm text-white/60 hover:text-white transition-colors">
+                      {link.label}
+                    </Link>
                   </li>
                 ))}
               </ul>

@@ -52,6 +52,11 @@ interface CustomerContextType {
   // for "switch user" flows.
   login: (returnTo?: string, force?: boolean) => void;
   logout: () => Promise<void>;
+  // Wisselt naar een ander account: ontkoppelt de cart van de huidige
+  // klant en start een nieuwe OAuth-flow waarbij Shopify altijd om
+  // een nieuw e-mailadres vraagt (geen auto-login op de bestaande
+  // customer-account-session).
+  switchUser: () => Promise<void>;
   // Force-refresh the customer profile from the API.
   refresh: () => Promise<void>;
 }
@@ -138,6 +143,20 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     window.location.href = `/api/auth/start?${params.toString()}`;
   }, []);
 
+  const switchUser = useCallback(async () => {
+    // Drop the cart-binding to the current customer first (otherwise
+    // Shopify-checkout could still show their data to whoever logs in
+    // next on this device). Then start a fresh OAuth with prompt=login
+    // so Shopify forces a re-authentication. After successful exchange
+    // the hlty_* cookies are overwritten by the new session.
+    try {
+      await unbindStoredCart();
+    } catch {
+      // best-effort
+    }
+    window.location.href = `/api/auth/start?return_to=${encodeURIComponent('/account')}&force=1`;
+  }, []);
+
   const logout = useCallback(async () => {
     // Drop Shopify's server-side customer-binding on the cart before
     // navigating away. Items stay (cart is re-created with same lines)
@@ -160,7 +179,7 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
 
   return (
     <CustomerContext.Provider
-      value={{ session, customer, isLoading, error, isLoggedIn, login, logout, refresh }}
+      value={{ session, customer, isLoading, error, isLoggedIn, login, logout, switchUser, refresh }}
     >
       {children}
     </CustomerContext.Provider>

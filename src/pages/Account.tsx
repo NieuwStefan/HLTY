@@ -22,6 +22,7 @@ import {
   Star,
   Check,
   AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { useCustomer, type Customer, type CustomerAddress } from '../context/CustomerContext';
 import { useCart } from '../context/CartContext';
@@ -68,29 +69,19 @@ interface Order {
 type Tab = 'overview' | 'orders' | 'profile';
 
 export default function Account() {
-  const { isLoggedIn, customer, isLoading, error, login, logout } = useCustomer();
+  const { isLoggedIn, customer, isLoading, error, login, logout, switchUser } = useCustomer();
 
-  if (!isLoggedIn)
-    return (
-      <LoginPrompt
-        onLogin={() => login('/account')}
-        onSwitchUser={() => login('/account', true)}
-      />
-    );
+  if (!isLoggedIn) return <LoginPrompt onLogin={() => login('/account')} />;
   if (isLoading && !customer) return <FullPageLoader />;
 
-  return <Dashboard customer={customer} error={error} onLogout={logout} />;
+  return (
+    <Dashboard customer={customer} error={error} onLogout={logout} onSwitchUser={switchUser} />
+  );
 }
 
 // ---------- Login Prompt ----------
 
-function LoginPrompt({
-  onLogin,
-  onSwitchUser,
-}: {
-  onLogin: () => void;
-  onSwitchUser: () => void;
-}) {
+function LoginPrompt({ onLogin }: { onLogin: () => void }) {
   // Wanneer de bezoeker net terugkomt van de Shopify-checkout — waar
   // hij mogelijk op "Inloggen" heeft geklikt en daar wel z'n Shopify-
   // session heeft, maar geen hlty_session bij ons — dan ergeren we hem
@@ -123,13 +114,6 @@ function LoginPrompt({
           Inloggen / Registreren
         </button>
 
-        <button
-          onClick={onSwitchUser}
-          className="mt-3 text-xs font-medium text-[var(--color-muted)] hover:text-[var(--color-navy)] underline-offset-4 hover:underline"
-        >
-          Inloggen met een ander account
-        </button>
-
         <div className="mt-5 flex items-start gap-2 text-left">
           <Shield className="w-4 h-4 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
           <p className="text-[11px] text-[var(--color-muted)] leading-relaxed">
@@ -158,13 +142,16 @@ function Dashboard({
   customer,
   error,
   onLogout,
+  onSwitchUser,
 }: {
   customer: ReturnType<typeof useCustomer>['customer'];
   error: string | null;
   onLogout: () => Promise<void>;
+  onSwitchUser: () => Promise<void>;
 }) {
   const [tab, setTab] = useState<Tab>('overview');
   const [loggingOut, setLoggingOut] = useState(false);
+  const [switching, setSwitching] = useState(false);
 
   // "Echt nieuw" = nooit een profiel ingevuld, geen adresboek. Voor die
   // klanten is "Welkom terug" misleidend — een eerste-bezoek-tekst is
@@ -187,6 +174,15 @@ function Dashboard({
       await onLogout();
     } catch {
       setLoggingOut(false);
+    }
+  }
+
+  async function handleSwitchUser() {
+    setSwitching(true);
+    try {
+      await onSwitchUser();
+    } catch {
+      setSwitching(false);
     }
   }
 
@@ -244,11 +240,19 @@ function Dashboard({
       <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
         <button
           onClick={handleLogout}
-          disabled={loggingOut}
+          disabled={loggingOut || switching}
           className="btn-secondary py-3 px-6 gap-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {loggingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
           {loggingOut ? 'Uitloggen...' : 'Uitloggen'}
+        </button>
+        <button
+          onClick={handleSwitchUser}
+          disabled={loggingOut || switching}
+          className="inline-flex items-center gap-2 text-sm font-medium text-[var(--color-muted)] hover:text-[var(--color-navy)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {switching ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+          {switching ? 'Wisselen...' : 'Wissel van account'}
         </button>
         <Link
           to="/"

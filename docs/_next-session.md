@@ -11,8 +11,9 @@ Hoi! We gaan verder met HLTY.shop, een Shopify-headless React-app
 (Vite/React 19, Vercel) in /Users/stefanritsema/Documents/VibeCode/HLTY.
 
 We zitten in **fase 6 — AI-websitetest-rapport** (14 mei 2026, 26
-bevindingen). 12 punten zijn al live op productie, de rest staat in
-batches. Volledige status in:
+bevindingen). 22 punten zijn al live op productie, 3 zijn doorgeschoven
+naar eigen latere fases, en 1 punt (Solo #13 — Checkout indicator) is
+nu het eerstvolgende. Volledige status in:
 
   docs/06-fase-6-rapport-websitetest.md
 
@@ -41,17 +42,28 @@ batches. Volledige status in:
 - **Per fase een verslag** in `docs/0X-fase-X-onderwerp.md` (volg conventie
   van fases 1–6).
 
-**Eerstvolgende actie — Batch E (sitewide consistentie):**
+**Eerstvolgende actie — Solo #13 — Checkout progress-indicator:**
 
-Vier kleinere code-fixes verspreid over de site. Zie § 9 in docs/06 voor
-de tabel. Punten 10, 11, 22, 24.
+Dit is een **onderzoekspunt**, niet zomaar een fix. Het AI-rapport
+constateerde dat er geen voortgangs-indicator zichtbaar is tijdens de
+checkout. Maar onze checkout draait op Shopify's eigen platform
+(`checkout.hlty.shop`) — dat is grotendeels buiten onze directe
+React-controle.
 
-Begin met **punt 10 — "Merken dropdown te lang, scrollen nodig"**.
-Onderzoek het Merken-dropdown in `src/components/Header.tsx`, leg me 2-3
-oplossingsopties voor (met jouw voorkeur), wacht op mijn akkoord.
+Begin met onderzoek:
 
-**Daarna komt Batch A** (Shopify-data fixes, deels code-side via
-presentatie-laag-fixes vanwege Holland Pharma — zie tabel in docs/06).
+1. Wat exact zag de AI-testbot — de Shopify-stap-indicator (Informatie /
+   Verzending / Betaling) of iets anders?
+2. Wat zit er in Shopify checkout-instellingen of Checkout Extensions
+   (functie van Shopify Plus/upgrades) qua aanpasbaarheid?
+3. Alternatieven aan onze kant — bv. een "Stap 1 van 3"-banner in de
+   cart drawer of voor het verlaten van `/cart` zodat klanten weten
+   waar ze staan voordat ze in de Shopify-flow stappen.
+
+Leg me 2-3 opties voor met je voorkeur, dan kies ik.
+
+**Daarna komen de eigen vervolg-fases** (Productadvisor + SEO/GEO), niet
+in fase 6.
 
 **Wat NIET in deze fase zit (eigen fases later):**
 - Productadvisor (punten 3, 5 + extra issues) → eigen Fase 7+
@@ -59,11 +71,12 @@ presentatie-laag-fixes vanwege Holland Pharma — zie tabel in docs/06).
 - Merken-pagina inrichting → wishlist, samen later oppakken
 
 **Productie-URL:** https://www.hlty.shop
-**Laatste commit:** `5794949` op `main`
+**Laatste commit:** (zie `git log --oneline -1` op `main`)
 **Vercel project:** `hlty-storefront`
 
-Begin met `cat docs/06-fase-6-rapport-websitetest.md | head -200`, lees
-de status, en stel daarna voor wat je voor punt 6 wil onderzoeken.
+Begin met `cat docs/06-fase-6-rapport-websitetest.md | head -250`, lees
+de eindstaat-tabel en volgende-stap-sectie, en stel daarna voor wat je
+voor Solo #13 wil onderzoeken.
 ```
 
 ---
@@ -74,9 +87,8 @@ Mocht je tussendoor de context kwijt zijn, hier de essentie:
 
 | Wat | Antwoord |
 |-----|----------|
-| Hoeveel punten zijn live? | 12 van 26 (46%) |
-| Wat eerstvolgend? | Batch E (sitewide consistentie) — start met #10 |
+| Hoeveel punten zijn live? | 22 van 26 (85%) |
+| Wat eerstvolgend? | Solo #13 — Checkout progress-indicator (onderzoeksessie) |
 | Wat krijgen eigen fase? | Productadvisor, SEO/GEO, Merken-pagina |
-| Welke commit is live? | `5794949` op `main` |
 | Welke ene file vat alles samen? | `docs/06-fase-6-rapport-websitetest.md` |
 | Hoe weet de volgende AI dit? | Via `MEMORY.md` + bovenstaande prompt |

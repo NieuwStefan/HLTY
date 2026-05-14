@@ -16,9 +16,9 @@ const FEATURED_COLLECTIONS = [
   { handle: 'vitamines-1', label: 'Vitamines', icon: Pill, color: '#FF9500' },
   { handle: 'mineralen-1', label: 'Mineralen', icon: Zap, color: '#007AFF' },
   { handle: 'eiwitten-aminozuren-1', label: 'Eiwitten', icon: Dumbbell, color: '#FF3B30' },
-  { handle: 'kruiden-planten-2', label: 'Kruiden & Planten', icon: Leaf, color: '#34C759' },
+  { handle: 'kruiden-planten-1', label: 'Kruiden & Planten', icon: Leaf, color: '#34C759' },
   { handle: 'superfoods-1', label: 'Superfoods', icon: Apple, color: '#5E5CE6' },
-  { handle: 'fysiotherapie-herstel-1', label: 'Fysiotherapie', icon: Cross, color: '#AF52DE' },
+  { handle: 'fysiotherapie-herstel-1', label: 'Fysiotherapie & Herstel', icon: Cross, color: '#AF52DE' },
 ];
 
 const TRUST_STATS = [
@@ -47,7 +47,7 @@ const SELECTION_STEPS = [
     step: '03',
     icon: PackageCheck,
     title: 'Alleen wat werkt',
-    desc: 'Pas als een product écht toegevoegde waarde heeft, komt het in ons assortiment. Geen marketing-hypes, geen onnodige toevoegingen.',
+    desc: 'Pas als een product écht toegevoegde waarde heeft, komt het in ons assortiment. Geen marketingclaims, geen onnodige toevoegingen.',
     color: '#FF9500',
   },
 ];
@@ -121,7 +121,7 @@ export default function Home() {
                   className="mt-6 text-base sm:text-lg text-white/70 max-w-xl mx-auto lg:mx-0 leading-relaxed"
                 >
                   Onze fysiotherapeuten selecteerden uit duizenden supplementen
-                  alleen wat écht werkt. Helder, eerlijk en zonder marketingverhalen.
+                  alleen wat écht werkt. Helder, eerlijk en zonder marketingclaims.
                 </motion.p>
 
                 <motion.div

@@ -5,8 +5,8 @@ const CATEGORY_LINKS = [
   { label: 'Vitamines', href: '/collectie/vitamines-1' },
   { label: 'Mineralen', href: '/collectie/mineralen-1' },
   { label: 'Eiwitten', href: '/collectie/eiwitten-aminozuren-1' },
-  { label: 'Kruiden & Planten', href: '/collectie/kruiden-planten-2' },
-  { label: 'Fysiotherapie', href: '/collectie/fysiotherapie-herstel-1' },
+  { label: 'Kruiden & Planten', href: '/collectie/kruiden-planten-1' },
+  { label: 'Fysiotherapie & Herstel', href: '/collectie/fysiotherapie-herstel-1' },
 ];
 
 const GOAL_LINKS = [

@@ -16,6 +16,7 @@ import ProductDescription from '../components/ProductDescription';
 import BrandSection from '../components/BrandSection';
 import { getBrand } from '../data/brands';
 import { findPrimaryCategory } from '../lib/categories';
+import { formatProductTitle } from '../lib/product-title';
 
 interface ProductLocationState {
   from?: {
@@ -179,7 +180,7 @@ export default function Product() {
               <span>/</span>
             </>
           )}
-          <span className="text-[var(--color-navy)] font-medium truncate">{product.title}</span>
+          <span className="text-[var(--color-navy)] font-medium truncate">{formatProductTitle(product.title, product.vendor)}</span>
         </div>
 
         {/* Top: Image + Info */}
@@ -247,7 +248,7 @@ export default function Product() {
               className="text-2xl sm:text-3xl font-extrabold text-[var(--color-navy)] tracking-tight leading-tight"
               style={{ fontFamily: 'Montserrat' }}
             >
-              {product.title}
+              {formatProductTitle(product.title, product.vendor)}
             </h1>
 
             {/* Price + Stock */}

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ShoppingBag } from 'lucide-react';
 import { type Product, formatPrice } from '../lib/shopify';
+import { formatProductTitle } from '../lib/product-title';
 import { useCart } from '../context/CartContext';
 
 export interface ProductCardFrom {
@@ -85,7 +86,7 @@ export default function ProductCard({ product, index = 0, from }: Props) {
               {product.vendor}
             </p>
             <h3 className="text-sm font-semibold text-[var(--color-navy)] leading-snug line-clamp-2 min-h-[2.5rem]">
-              {product.title}
+              {formatProductTitle(product.title, product.vendor)}
             </h3>
             <p className="mt-2 text-base font-bold text-[var(--color-navy)]">
               {formatPrice(price)}

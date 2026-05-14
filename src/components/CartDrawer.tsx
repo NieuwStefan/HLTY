@@ -3,6 +3,7 @@ import { X, Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useCustomer } from '../context/CustomerContext';
 import { formatPrice } from '../lib/shopify';
+import { formatProductTitle } from '../lib/product-title';
 
 // Appends customer-data query params to the Shopify checkout URL so that
 // e-mail and shipping fields are pre-filled when the buyer arrives. This
@@ -135,7 +136,7 @@ export default function CartDrawer() {
                             </p>
                           )}
                           <h4 className="text-sm font-semibold text-[var(--color-navy)] line-clamp-2 mt-0.5">
-                            {line.merchandise.product.title}
+                            {formatProductTitle(line.merchandise.product.title, line.merchandise.product.vendor)}
                           </h4>
                           <p className="text-sm font-bold text-[var(--color-navy)] mt-1">
                             {formatPrice(line.cost.totalAmount)}

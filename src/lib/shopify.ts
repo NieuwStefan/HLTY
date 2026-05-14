@@ -404,6 +404,82 @@ export async function searchProducts(query: string, first = 24, sortKey: 'RELEVA
   return result;
 }
 
+// ---------- Predictive search (autocomplete) ----------
+
+export interface PredictiveProduct {
+  id: string;
+  handle: string;
+  title: string;
+  vendor: string;
+  image: { url: string; altText: string | null } | null;
+  price: Money;
+}
+
+export interface PredictiveCollection {
+  id: string;
+  handle: string;
+  title: string;
+}
+
+export interface PredictiveSearchResult {
+  products: PredictiveProduct[];
+  collections: PredictiveCollection[];
+}
+
+/** Snel autocomplete-zoekendpoint (Shopify Storefront API). Gemaakt voor
+ *  type-as-you-search. Geen cache: een query verandert per keystroke. */
+export async function predictiveSearch(query: string): Promise<PredictiveSearchResult> {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return { products: [], collections: [] };
+
+  const data = await shopifyFetch<any>(
+    `query PredictiveSearch($query: String!) {
+      predictiveSearch(
+        query: $query,
+        types: [PRODUCT, COLLECTION],
+        limit: 6,
+        limitScope: EACH,
+        unavailableProducts: HIDE
+      ) {
+        products {
+          id
+          handle
+          title
+          vendor
+          images(first: 1) { edges { node { url altText } } }
+          priceRange { minVariantPrice { amount currencyCode } }
+        }
+        collections {
+          id
+          handle
+          title
+        }
+      }
+    }`,
+    { query: trimmed },
+  );
+
+  const products: PredictiveProduct[] = (data.predictiveSearch?.products ?? []).map(
+    (p: any) => {
+      const img = p.images?.edges?.[0]?.node;
+      return {
+        id: p.id,
+        handle: p.handle,
+        title: p.title,
+        vendor: p.vendor,
+        image: img ? { url: img.url, altText: img.altText } : null,
+        price: p.priceRange.minVariantPrice,
+      };
+    },
+  );
+
+  const collections: PredictiveCollection[] = (data.predictiveSearch?.collections ?? []).map(
+    (c: any) => ({ id: c.id, handle: c.handle, title: c.title }),
+  );
+
+  return { products, collections };
+}
+
 export async function getProductRecommendations(productId: string): Promise<Product[]> {
   const key = `recommendations:${productId}`;
   const cached = cacheGet<Product[]>(key);

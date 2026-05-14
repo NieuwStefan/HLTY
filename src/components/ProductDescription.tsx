@@ -229,7 +229,10 @@ const DISCLAIMER_TRIGGERS: RegExp[] = [
   /Aanbevolen dosering niet overschrijden/i,
   /Een gevarieerde,?\s*evenwichtige voeding/i,
   /Buiten bereik van (jonge )?kinderen/i,
-  /Droog,?\s*afgesloten en bij kamertemperatuur/i,
+  // NB: "Droog, afgesloten en bij kamertemperatuur" is bewaaradvies, geen
+  // waarschuwing — niet meer als disclaimer-trigger (#6). Komt nu in een
+  // eigen "Bewaaradvies"-sectie via SECTION_PATTERNS, of blijft in de
+  // beschrijving zelf staan.
   /Raadpleeg een (deskundige|arts)/i,
   /Niet geschikt voor (kinderen|zwangeren)/i,
 ];
@@ -244,25 +247,56 @@ function extractDisclaimer(html: string): { main: string; disclaimer: string } {
   }
   if (earliest === -1) return { main: html, disclaimer: '' };
 
-  // Walk back to the previous <br><br> or paragraph boundary so we cut at a
-  // sensible spot (not mid-sentence).
+  // Walk back to a safe boundary so we never cut mid-sentence. Prefer the
+  // strongest boundary available; if no boundary exists before the trigger,
+  // leave the text alone — een mid-zin-knip levert juist het probleem op dat
+  // #6 wilde oplossen.
   const before = html.slice(0, earliest);
   const cutAt = Math.max(
     before.lastIndexOf('<br><br>'),
     before.lastIndexOf('</p>'),
-    0
   );
-  const main = trimBrs(html.slice(0, cutAt > 0 ? cutAt : earliest));
-  const disclaimer = trimBrs(html.slice(cutAt > 0 ? cutAt : earliest));
+  if (cutAt < 0) return { main: html, disclaimer: '' };
+  const main = trimBrs(html.slice(0, cutAt));
+  const disclaimer = trimBrs(html.slice(cutAt));
   return { main, disclaimer };
+}
+
+// --- Holland Pharma feed cleanups -----------------------------------------
+
+// #7 — Strip footnote-markers (<sup>3</sup>, <sup>1,2</sup>, of unicode
+// "¹³") die naar definities verwijzen die niet in de feed staan.
+function stripDanglingSuperscripts(html: string): string {
+  return html
+    .replace(/<sup\b[^>]*>\s*[\d,\s\-]+\s*<\/sup>/gi, '')
+    .replace(/[⁰¹²³⁴-⁹]+/g, '');
+}
+
+// #18 — Voeg ontbrekende spatie toe na een punt die direct gevolgd wordt
+// door een hoofdletter ("10 jaar.Bevat" → "10 jaar. Bevat"). Werkt door
+// niet-HTML tekst heen via een lookbehind voor word-character.
+function addMissingSpaceAfterPeriod(html: string): string {
+  return html.replace(/([a-zà-ÿ0-9])\.([A-ZÀ-Ÿ])/g, '$1. $2');
+}
+
+// #19 — Capitalize de eerste letter aan het begin van de tekst en na elke
+// `<br>` (of `<br><br>`). Voor disclaimers waar Holland Pharma soms een
+// nieuwe zin met kleine letter laat starten ("buiten bereik …").
+function capitalizeSentenceStarts(html: string): string {
+  return html.replace(
+    /((?:^|<br\s*\/?>)\s*(?:<[^>/][^>]*>\s*)*)([a-zà-ÿ])/gi,
+    (_, prefix: string, letter: string) => prefix + letter.toUpperCase(),
+  );
 }
 
 // --- Top-level parser -----------------------------------------------------
 
 function enhanceHtml(html: string): string {
-  // Run table builder first (operates on long runs of <br>-separated rows),
-  // then bullet builder (operates on remaining <br>-separated lines).
-  return tryBuildBullets(tryBuildTable(html));
+  // Pre-clean Holland Pharma artefacts (#7, #18) before the table/bullet
+  // builders run — those builders work on cleaned text and shouldn't need to
+  // worry about dangling sups or glued sentences.
+  const cleaned = addMissingSpaceAfterPeriod(stripDanglingSuperscripts(html));
+  return tryBuildBullets(tryBuildTable(cleaned));
 }
 
 function parseDescription(rawHtml: string, productTitle: string): Section[] {
@@ -358,7 +392,7 @@ function parseDescription(rawHtml: string, productTitle: string): Section[] {
   if (disclaimerPieces.length > 0) {
     result.push({
       title: 'Belangrijk om te weten',
-      html: disclaimerPieces.join('<br><br>'),
+      html: capitalizeSentenceStarts(disclaimerPieces.join('<br><br>')),
       variant: 'disclaimer',
     });
   }

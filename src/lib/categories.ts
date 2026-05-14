@@ -7,8 +7,8 @@ export const PRIMARY_CATEGORIES: PrimaryCategory[] = [
   { handle: 'vitamines-1', label: 'Vitamines' },
   { handle: 'mineralen-1', label: 'Mineralen' },
   { handle: 'eiwitten-aminozuren-1', label: 'Eiwitten' },
-  { handle: 'kruiden-planten-2', label: 'Kruiden & Planten' },
-  { handle: 'fysiotherapie-herstel-1', label: 'Fysiotherapie' },
+  { handle: 'kruiden-planten-1', label: 'Kruiden & Planten' },
+  { handle: 'fysiotherapie-herstel-1', label: 'Fysiotherapie & Herstel' },
 ];
 
 const HANDLE_TO_LABEL = new Map(PRIMARY_CATEGORIES.map((c) => [c.handle, c.label]));

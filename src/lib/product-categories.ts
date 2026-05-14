@@ -42,7 +42,7 @@ export const MAIN_CATEGORIES: MainCategory[] = [
         id: 'kruiden',
         label: 'Kruiden & Planten',
         handles: [
-          'kruiden-planten-2',
+          'kruiden-planten-1',
           'kurkuma-curcumine-1',
           'ashwagandha-adaptogenen-1',
           'medicinale-paddenstoelen-1',

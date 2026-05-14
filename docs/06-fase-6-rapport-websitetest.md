@@ -541,13 +541,32 @@ leggen.
 Live op productie (commit `5794949` op `main`, Vercel auto-deploy):
 - Batches B, C, D + Punt 2 + categorie-filter in sidebar + Checkbox-styling
 
-**Eerstvolgende actie — Batch A (Shopify admin)**
+**Eerstvolgende actie — Batch E (sitewide consistentie)**
 
-Stefan handelt de volgende punten af in Shopify admin op niet-HLTY
-producten. Belangrijk: Holland Pharma overschrijft Shopify-aanpassingen
-bij volgende sync (zie § 2b) — dus voor sommige items is een
-**presentatie-laag-fix** mogelijk de betere oplossing dan handmatig in
-admin werken. Per punt te beoordelen:
+Vier kleinere code-fixes verspreid over de site:
+
+| # | Categorie | Onderwerp | Locatie (vermoed) |
+|---|-----------|-----------|-------------------|
+| 10 | UX | Merken dropdown te lang, scrollen nodig | `src/components/Header.tsx` |
+| 11 | UX | Sticky nav overlapt producttitel bij scrollen | `src/pages/Product.tsx` of CSS-offset |
+| 22 | COPY | Footer "Fysiotherapie" vs nav "Fysiotherapie & Herstel" — inconsistente naamgeving | `src/components/Footer.tsx` + nav |
+| 24 | COPY | "marketing-hypes" (met koppelteken) vs "marketingverhalen" (aaneen) | `src/pages/Home.tsx` of AIAdvisor |
+
+**Volgorde-afspraak met Stefan (zoals oorspronkelijk besproken):**
+
+1. ⏳ Batch E — Sitewide consistentie *(eerstvolgende)*
+2. ⏳ Batch A — Shopify-data fixes (deels code, deels admin) *— zie tabel hieronder voor Holland-Pharma-overwegingen*
+3. ⏳ Solo #14 — Zoekmodal autocomplete (eigen feature)
+4. ⏳ Solo #13 — Checkout indicator (onderzoek, mogelijk niets te doen)
+5. ⏭ Eigen Fase 7+ — Productadvisor (#3, #5 + Stefan's extra issues)
+6. ⏭ Eigen Fase 8 — SEO & GEO (#4 meta-titels + Open Graph + structured data)
+7. ⏭ Wishlist — Merken-pagina inrichting (open punt, samen oppakken)
+
+### Batch A — voorbereide aanpak-tabel (voor straks)
+
+Belangrijk: Holland Pharma overschrijft Shopify-aanpassingen bij
+volgende sync (zie § 2b) — dus voor de meeste items is een
+**presentatie-laag-fix** in React-code de duurzame oplossing.
 
 | # | Onderwerp | Aanpak |
 |---|-----------|--------|
@@ -558,16 +577,3 @@ admin werken. Per punt te beoordelen:
 | 19 | "buiten bereik" zonder hoofdletter | Code-fix (capitalize-eerste-letter in bullet-rendering) |
 | 20 | ".00" in productnamen sitebreed | Code-fix (regex `\.00\s` → ' ') in title-display helper |
 | 25 | `/collectie/kruiden-planten-2` URL (`-2` ipv `-1`) | Stefan in Shopify — collection-handle is custom, niet door HP gemanaged |
-
-Daarna **Batch E (sitewide consistentie)**: #10 merken-dropdown te lang,
-#11 sticky nav overlapt producttitel, #22 Fysiotherapie-copy
-inconsistentie, #24 marketing-hypes vs -verhalen.
-
-**Volgorde-afspraak met Stefan:**
-1. ⏳ Batch A — Shopify-data fixes (deels code, deels admin)
-2. ⏳ Batch E — Sitewide consistentie
-3. ⏳ Solo #14 — Zoekmodal autocomplete (eigen feature)
-4. ⏳ Solo #13 — Checkout indicator (onderzoek, mogelijk niets te doen)
-5. ⏭ Eigen Fase 7+ — Productadvisor (#3, #5 + Stefan's extra issues)
-6. ⏭ Eigen Fase 8 — SEO & GEO (#4 meta-titels + Open Graph + structured data)
-7. ⏭ Wishlist — Merken-pagina inrichting (open punt, samen oppakken)

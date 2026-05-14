@@ -41,15 +41,17 @@ batches. Volledige status in:
 - **Per fase een verslag** in `docs/0X-fase-X-onderwerp.md` (volg conventie
   van fases 1–6).
 
-**Eerstvolgende actie — Batch A (Shopify-data fixes):**
+**Eerstvolgende actie — Batch E (sitewide consistentie):**
 
-Zie § 9 in docs/06 voor de complete tabel. Punten 6, 7, 16, 18, 19, 20,
-25. Mijn afspraak met de vorige sessie was: per punt eerst voorleggen
-of we het code-side of admin-side aanpakken (Holland Pharma overweging).
+Vier kleinere code-fixes verspreid over de site. Zie § 9 in docs/06 voor
+de tabel. Punten 10, 11, 22, 24.
 
-Begin met **punt 6 — "Bewaarvoorschrift afgebroken zin"**. Onderzoek waar
-dit voorkomt op de site, leg me 2-3 oplossingsopties voor (met jouw
-voorkeur), wacht op mijn akkoord.
+Begin met **punt 10 — "Merken dropdown te lang, scrollen nodig"**.
+Onderzoek het Merken-dropdown in `src/components/Header.tsx`, leg me 2-3
+oplossingsopties voor (met jouw voorkeur), wacht op mijn akkoord.
+
+**Daarna komt Batch A** (Shopify-data fixes, deels code-side via
+presentatie-laag-fixes vanwege Holland Pharma — zie tabel in docs/06).
 
 **Wat NIET in deze fase zit (eigen fases later):**
 - Productadvisor (punten 3, 5 + extra issues) → eigen Fase 7+
@@ -73,7 +75,7 @@ Mocht je tussendoor de context kwijt zijn, hier de essentie:
 | Wat | Antwoord |
 |-----|----------|
 | Hoeveel punten zijn live? | 12 van 26 (46%) |
-| Wat eerstvolgend? | Batch A (Shopify-data fixes) — start met #6 |
+| Wat eerstvolgend? | Batch E (sitewide consistentie) — start met #10 |
 | Wat krijgen eigen fase? | Productadvisor, SEO/GEO, Merken-pagina |
 | Welke commit is live? | `5794949` op `main` |
 | Welke ene file vat alles samen? | `docs/06-fase-6-rapport-websitetest.md` |

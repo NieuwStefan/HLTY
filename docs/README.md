@@ -14,7 +14,18 @@ besloten, wat is gedaan en waarom.
 | 04 | [04-fase-4-profile-edit.md](./04-fase-4-profile-edit.md) | Fase 4 — Eigen profile-edit UI (vervangt link-naar-Shopify in Profiel-tab) | ✅ afgerond |
 | 05 | [05-fase-5-checkout-privacy.md](./05-fase-5-checkout-privacy.md) | Fase 5 — Checkout-privacy fix + UX-polishing (cart-unbind, OIDC id_token, onboarding-flow, NAAM-card, switch-user, F6.1 logo-redirect) | ✅ afgerond |
 | 06 | [06-fase-6-rapport-websitetest.md](./06-fase-6-rapport-websitetest.md) | Fase 6 — AI-websitetest: 26 bevindingen systematisch afwerken + Solo #13 (Checkout indicator) + payment cleanup | ✅ afgerond |
-| 07 | [07-fase-7-productadvisor.md](./07-fase-7-productadvisor.md) | Fase 7 — Productadvisor: fundamenteel herontwerp van AIAdvisor → HLTY Health Consultation (5 stappen, hybride rule-engine + AI-fallback) | 🟡 lopend |
+| 07 | [07-fase-7-productadvisor.md](./07-fase-7-productadvisor.md) | Fase 7 — Productadvisor: fundamenteel herontwerp van AIAdvisor → HLTY Health Consultation (4-stappen rule-engine, dieet-substitutie, leefstijl-modifier). **Live op productie**, in feedback-ronde | ✅ afgerond (live) |
+
+### Werkdocumenten Fase 7
+
+| Bestand | Onderwerp |
+|---------|-----------|
+| [_dieet-filter-voorstel.md](./_dieet-filter-voorstel.md) | Per-product dieet-onderzoek + 1-op-1 alternatieven (geïmplementeerd) |
+| [_shopify-tag-werkwijze.md](./_shopify-tag-werkwijze.md) | HLTY-tag-mechanisme: producten actief houden bij Holland Pharma-sync |
+| [_productadvisor-wishlist.md](./_productadvisor-wishlist.md) | Geparkeerd voor later: Fase 4 AI-fallback, doserings-/grootte-keuze, bundle-suggestie |
+| [_productadvisor-keuze-combinaties.md](./_productadvisor-keuze-combinaties.md) | Enumeratie alle 351 keuze-combinaties + strategie A/B/C |
+| [_productadvisor-mappings-template.md](./_productadvisor-mappings-template.md) | (Historisch) invul-template — niet meer gebruikt, mappings via Stefan's PDF ingevuld |
+| [_productadvisor-mappings-quickref.md](./_productadvisor-mappings-quickref.md) | (Historisch) quick-ref naast het template |
 
 ## Conventies voor verslagen
 

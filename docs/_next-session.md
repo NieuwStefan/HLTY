@@ -9,88 +9,86 @@ Claude Code-sessie.
 Hoi! We gaan verder met HLTY.shop, een Shopify-headless React-app
 (Vite/React 19, Vercel) in /Users/stefanritsema/Documents/VibeCode/HLTY.
 
-We zitten in **Fase 7 — Productadvisor herontwerp** (gestart 15 mei
-2026). De oude AIAdvisor.tsx is grondig geanalyseerd en herontworpen als
-**HLTY Health Consultation** — een 5-stappen quiz met een hybride
-architectuur:
+**Fase 7 — Productadvisor is AFGEROND en LIVE** op
+https://www.hlty.shop (commit ad55cad). De oude AIAdvisor is vervangen
+door HLTY Health Consultation: een deterministische 4-stappen quiz
+(doel → per-doel-vraag → dieet → leefstijl → resultaat) met 37
+gecureerde mappings. We zitten nu in de **feedback-ronde** — collega's
+en medisch professionals kijken naar de tool.
 
-- Stappen 1–4 zijn klikkeuzes (doelen / per-doel-vraag / dieet / leefstijl)
-- Stap 5 is optionele vrije tekst
-- Bij lege stap 5 → **deterministische rule-engine** kiest producten
-- Bij gevulde stap 5 → AI personaliseert (fase 4 — nog te implementeren)
+**LEES ALS EERSTE voordat je iets doet:**
 
-**LEES ALS EERSTE deze bestanden voordat je iets anders doet:**
+1. `docs/07-fase-7-productadvisor.md` § 0 "Actuele status" — dit blok is
+   leidend; secties 5/6/8 zijn historische tussenstand (15 mei) en
+   ACHTERHAALD
+2. Projectmemory `MEMORY.md` (auto-loaded) — vooral
+   `project_hlty_productadvisor.md` en `project_hlty_shopify_tag.md`
+3. `docs/_productadvisor-wishlist.md` — Fase 4 AI-fallback +
+   doserings-/grootte-keuze, volledig uitgewerkt hoe te heractiveren
+4. `docs/_dieet-filter-voorstel.md` — dieet-onderzoek (geïmplementeerd)
 
-1. `docs/07-fase-7-productadvisor.md` — volledige beschrijving van fase 7
-   (status, architectuur, wat is gedaan, wat resteert)
-2. `docs/06-fase-6-rapport-websitetest.md` § 9 en § 10 — afsluiting van
-   Solo #13 (Checkout indicator) en de betaalmethoden-cleanup
-3. Mijn projectmemory `MEMORY.md` (auto-loaded) — vooral
-   `project_hlty_productadvisor.md` voor de architectuur-keuzes
-4. `docs/_productadvisor-mappings-template.md` — het invul-template dat
-   ik samen met de fysio ga doorlopen
+**Code-bestanden:**
 
-**Code-bestanden om te weten:**
-
-- `src/lib/consultation-rules.ts` — 37 placeholder mappings + types +
+- `src/lib/consultation-rules.ts` — 37 mappings + types
+  (MappingProduct met dietTags/dietAlternatives/flavorOptions) +
   per-doel stap-2-vragen
-- `src/lib/consultation-engine.ts` — selectie-engine (rule-lookup +
-  dieet-filter + leefstijl-modifier). Modifiers hebben TODO-markers
-  bedoeld om SAMEN met Stefan in te vullen.
-- `src/components/HealthConsultation.tsx` — UI (live op localhost)
+- `src/lib/consultation-engine.ts` — engine: rule-lookup →
+  dieet-substitutie → leefstijl-modifier (boost 1,5/conditie) →
+  top 3; samenvatting-addendum; suikervrij/glutenvrij-notitie.
+  `runConsultationWithAI` + `freeText` staan klaar maar worden NIET
+  aangeroepen (Fase 4)
+- `src/lib/consultation-lifestyle-tips.ts` — 25 contextuele tips
+- `src/components/HealthConsultation.tsx` — UI, 4 stappen, smaak-kiezer
 
 **Werkwijze (vasthouden):**
 
-- Stap voor stap, geen quick fixes — lange-termijn oplossingen
-- Per onderdeel meerdere oplossingen, ik kies
-- Voorzichtig met Shopify-wijzigingen — vraag akkoord per admin-actie
-- Voor content-issues op niet-HLTY producten: presentatie-laag-fix in
-  React-code (Holland Pharma overschrijft Shopify admin-edits)
+- Stap voor stap, lange-termijn oplossingen, geen quick fixes
+- Per onderdeel meerdere opties, Stefan kiest bij richtinggevende keuzes
+- Shopify-admin-acties: vraag akkoord. Nieuw product activeren? ALTIJD
+  ook de tag `HLTY` zetten, anders zet de Holland Pharma-sync 'm terug
+  naar Concept (zie `_shopify-tag-werkwijze.md`)
+- Content-issues niet-HLTY producten → presentatie-laag-fix in React
 - Per fase een verslag in `docs/0X-fase-X-onderwerp.md`
 
-**Eerstvolgende actie hangt af van waar ik (Stefan) ben:**
+**Mogelijke eerstvolgende acties (Stefan bepaalt):**
 
-1. **Mappings nog niet ingevuld:** Claude staat in de wacht. Eventueel
-   vragen over het template-invullen beantwoorden.
-2. **Mappings ingevuld:** Claude converteert ze naar code in
-   `consultation-rules.ts`. Daarna samen fase 3 (modifiers) uitwerken.
-3. **Bij twijfel of vragen:** klop aan bij Claude voor advies tijdens
-   het uitwerken van de mappings.
+1. **Feedback verwerken** uit de ronde met professionals
+2. **Fase 4 — AI-fallback + stap 5 terug** — zie wishlist voor het
+   complete heractivatie-plan (UI-stap terug, /api/openai, prompt,
+   fallback-strategie)
+3. **Doserings-/grootte-keuze** — generiek mechanisme staat al
+   (flavorOptions-patroon), is vooral data- + curatie-werk
+4. Opruimen: oude `AIAdvisor.tsx` verwijderen (nu dead code)
 
 **Productie-URL:** https://www.hlty.shop
 **Localhost-dev:** `cd /Users/stefanritsema/Documents/VibeCode/HLTY && npm run dev`
-**Laatste relevante commit:** `aa05e21` (fase 6 batches live)
-**NOG NIET gecommit:** alle fase 7-code (HealthConsultation,
-consultation-rules, consultation-engine) + alle fase 7-documentatie
+**Laatste commit:** `ad55cad` (Fase 7 live)
+**Repo:** github.com/NieuwStefan/HLTY (main), Vercel auto-deploy op push
 
-**Begin met `cat docs/07-fase-7-productadvisor.md | head -100`**, lees de
-huidige status, en vraag mij waar we staan met de mapping-invulling.
-Begin niet met code-werk voordat je weet of de mappings er al zijn.
+Begin met `docs/07-fase-7-productadvisor.md` § 0 lezen, daarna vraag
+mij wat de feedback was / waar we mee verder gaan.
 ```
 
 ---
 
 ## Korte mentale-load-cheatsheet voor jou (Stefan)
 
-Mocht je tussendoor de context kwijt zijn:
-
 | Wat | Antwoord |
 |-----|----------|
-| Welke fase zijn we mee bezig? | Fase 7 — Productadvisor herontwerp |
-| Hoe heet de nieuwe tool? | HLTY Health Consultation |
-| Architectuur kort? | Regels eerst (37 curated mappings), AI alleen bij vrije tekst |
-| Hoeveel mappings invullen? | 27 enkele-doel + 10 dubbele-doel = 37 |
-| Waar staat het invul-template? | `docs/_productadvisor-mappings-template.md` |
-| Waar staat de quick-ref? | `docs/_productadvisor-mappings-quickref.md` |
-| Welke ene file vat alles samen? | `docs/07-fase-7-productadvisor.md` |
-| Hoe weet de volgende Claude dit? | Via `MEMORY.md` + bovenstaande prompt |
-| Wat komt na fase 7? | Fase 8 (assortiment-onderzoek) → Fase 9 (SEO/GEO) |
+| Status fase 7? | ✅ Afgerond & live op hlty.shop, in feedback-ronde |
+| Hoe heet de tool? | HLTY Health Consultation |
+| Hoeveel stappen? | 4 (stap 5 vrije tekst + AI bewust eruit, parkeer Fase 4) |
+| Architectuur? | Deterministisch: 37 mappings + dieet-substitutie + leefstijl-modifier |
+| Mappings ingevuld via? | Stefan's PDF `HLTY_scenario_producten` (niet het fysio-template) |
+| Wat is geparkeerd? | Fase 4 AI-fallback, doserings-keuze, bundle (zie wishlist) |
+| Welke file vat alles samen? | `docs/07-fase-7-productadvisor.md` § 0 |
+| Belangrijk Shopify-detail? | Nieuw product = status Actief **én** tag `HLTY` |
+| Laatste commit? | `ad55cad` — fase 7 live |
 
 ## Wat je doet als je verder wilt
 
-1. Plan een fysio-sessie van ~4 uur voor de 27 enkele-doel mappings
-2. Plan een tweede fysio-sessie van ~3 uur voor de 10 dubbele-doel mappings
-3. Vul de mappings in via het template
-4. Start een nieuwe Claude-sessie met bovenstaande prompt
-5. Geef Claude het ingevulde template, hij verwerkt het in code
-6. Daarna samen fase 3 (dieet/leefstijl modifiers) uitwerken
+1. Verzamel de feedback van collega's/medisch professionals
+2. Start een nieuwe Claude-sessie met bovenstaande prompt
+3. Geef Claude de feedback; samen prioriteren wat eerst opgepakt wordt
+4. Of: geef aan dat je Fase 4 (AI-fallback) of de doserings-keuze wilt
+   oppakken — de heractivatie-plannen staan klaar in de wishlist

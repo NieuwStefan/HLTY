@@ -1,7 +1,67 @@
 # Fase 7 — Productadvisor: fundamenteel herontwerp
 
 **Datum gestart:** 15 mei 2026
-**Status:** 🟡 Lopend — code-fundament staat, wachten op invulling van 37 curated mappings door Stefan + fysio
+**Status:** ✅ Afgerond & LIVE op productie (19 mei 2026) — in feedback-ronde met collega's + medisch professionals
+
+---
+
+## 0. Actuele status (19 mei 2026) — leidend boven secties 5/6/8
+
+> De secties 5 "Wat is gedaan", 6 "Wat resteert" en 8 "Volgende stap"
+> hieronder beschrijven de tussenstand van 15 mei (placeholder-mappings,
+> wachten op fysio). Dit blok is de **actuele waarheid**.
+
+**Wat er nu live staat op https://www.hlty.shop** (commit `ad55cad`,
+Vercel production deploy):
+
+- **4-stappen flow** (niet 5): doel → per-doel-vraag → dieet → leefstijl
+  → resultaat. Stap 5 (vrije tekst) + AI-fallback zijn bewust uit de
+  flow gehaald vóór de feedback-ronde (een loze tekstvraag zou
+  professionals verwarren). De AI-infrastructuur (`runConsultationWithAI`,
+  `freeText`) staat nog in de engine, klaar voor Fase 4.
+- **37 mappings volledig ingevuld** — niet via het fysio-template maar
+  via Stefan's PDF `HLTY_scenario_producten`. Per product: tagline,
+  productnaam, prijs, samengevoegde uitleg. Geen losse doseringstip
+  (bewuste keuze Stefan: dosering staat op de verpakking).
+- **Datastructuur** (`consultation-rules.ts`): `MappingProduct` met
+  tagline/productName/price/explanation + `dietTags` + `dietAlternatives`
+  (1-op-1 plantaardige vervanger per dieet) + `flavorOptions` (smaak-
+  kiezer, generiek herbruikbaar voor doseringen — zie wishlist).
+- **Dieet-substitutie** (`consultation-engine.ts`): bij vegan/vegetarisch/
+  lactosevrij wordt een conflicterend product 1-op-1 vervangen door een
+  geverifieerd plantaardig alternatief uit hetzelfde merken-assortiment
+  (visolie→Vegan Algenolie, whey→Vegan Protein, Q10→Magnesium malaat,
+  vis-collageen→Collagen Alternative, glucosamine→Vegan MSM). Geen lege
+  top-3. Detail: `_dieet-filter-voorstel.md`.
+- **Suikervrij/glutenvrij**: hele assortiment voldoet al (geen toegevoegde
+  suiker, geen gluten) → geen filtering, wel een groene
+  geruststellingsnotitie.
+- **Leefstijl-modifier** (stap 4): boost 1,5/conditie, stapelbaar — sterk
+  genoeg om de top-3 zichtbaar te veranderen (bv. stress=Ja kan Rhodiola
+  Q10 verdringen). Stabiele sort respecteert gecureerde volgorde.
+- **Samenvatting-addendum**: extra zin die exact beschrijft wat de
+  modifier doet (consistent, "praat niet tegen zichzelf").
+- **Contextuele leefstijl-tip**: 25 tips, gekozen op stap 3 (dieet) +
+  stap 4 (leefstijl) — `consultation-lifestyle-tips.ts`.
+- **6 disclaimers** per relevante mapping; algemene disclaimer onderaan
+  ("Raadpleeg eerst een medisch professional").
+- **UI**: 2 knoppen per product (In winkelwagen + Bekijk product),
+  smaak-kiezer dropdown bij ESN Whey (alleen leverbare smaken,
+  default Vanilla — de uitverkochte banaan is eruit).
+
+**Verwante documentatie:**
+- `_dieet-filter-voorstel.md` — volledig dieet-onderzoek (geïmplementeerd)
+- `_shopify-tag-werkwijze.md` — HLTY-tag-mechanisme (Holland Pharma-sync)
+- `_productadvisor-wishlist.md` — geparkeerd: **Fase 4 AI-fallback**
+  (volledig uitgewerkt hoe te heractiveren), doserings-/grootte-keuze,
+  bundle-suggestie
+
+**Wat resteert (geen prioriteit, in documentatie geparkeerd):**
+1. Feedback van collega's/medisch professionals verwerken
+2. Fase 4 — AI-fallback + stap 5 terug (zie wishlist voor het volledige
+   heractivatie-plan)
+3. Optioneel: doserings-/grootte-keuze, oude `AIAdvisor.tsx` verwijderen
+   (nu dead code, niet meer geïmporteerd), analytics-events
 
 ---
 

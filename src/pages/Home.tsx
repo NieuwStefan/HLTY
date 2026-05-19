@@ -6,7 +6,7 @@ import {
   ArrowRight, Leaf, CheckCircle, ShieldCheck, Truck,
   Award, FlaskConical, Pill, Apple, Cross, Search, ClipboardCheck, PackageCheck,
 } from 'lucide-react';
-import AIAdvisor from '../components/AIAdvisor';
+import HealthConsultation from '../components/HealthConsultation';
 import ProductCard from '../components/ProductCard';
 import { getFeaturedProducts, type Product } from '../lib/shopify';
 
@@ -269,9 +269,9 @@ export default function Home() {
         </section>
       )}
 
-      {/* Persoonlijk Productadvies */}
+      {/* Persoonlijk Productadvies — HLTY Consultation */}
       <section id="productadvies" className="mx-auto max-w-[1400px] px-4 scroll-mt-28">
-        <AIAdvisor />
+        <HealthConsultation />
       </section>
 
       {/* Zo selecteren wij ons assortiment */}

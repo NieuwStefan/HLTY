@@ -618,7 +618,7 @@ producten)"; keyboard ↓ highlight beweegt mee.
 | 10 | UX | Merken dropdown te lang | ✅ Live (Batch E) |
 | 11 | UX | Sticky nav overlapt producttitel | ✅ Live (Batch E) |
 | 12 | UX | Productnamen afgekapt in cart drawer | ✅ Live |
-| 13 | UX | Geen checkout progress-indicator | ⏳ Solo (onderzoek) |
+| 13 | UX | Geen checkout progress-indicator | ✅ Afgesloten — Shopify Basic-limiet |
 | 14 | UX | Geen autocomplete in zoekmodal | ✅ Live (Solo) |
 | 15 | CONTENT | "FITTERG" afgekapt in cart | ✅ Live |
 | 16 | CONTENT | "by fittergy" dubbel | ✅ Live (Batch A) |
@@ -633,9 +633,8 @@ producten)"; keyboard ↓ highlight beweegt mee.
 | 25 | URL | kruiden-planten-2 URL | ✅ Live (Batch A) |
 | 26 | URL | Klantenservice-links naar checkout-subdomein | ✅ Live (deel van punt 1) |
 
-**Voortgang:** 22 van 26 punten live (85%); 3 punten doorgeschoven naar
-eigen fases (Productadvisor #3+#5, SEO/GEO #4); 1 punt resterend
-(Solo #13 — Checkout indicator).
+**Voortgang:** 23 van 26 punten live/afgehandeld (88%); 3 punten doorgeschoven
+naar eigen fases (Productadvisor #3+#5 → Fase 7, SEO/GEO #4 → Fase 8).
 
 ---
 
@@ -711,7 +710,78 @@ UX-issues uit dit rapport zijn afgewerkt**. Pas dan staat de
 inhoudelijke basis goed genoeg om de optimalisatie-laag eroverheen te
 leggen.
 
-## 9. Volgende stap
+## 9. Solo #13 — Checkout progress-indicator (afgesloten 15 mei 2026)
+
+**Onderzoek:** uitgebreid de Shopify Basic-mogelijkheden bekeken, plus de
+live checkout in browser geïnspecteerd.
+
+**Bevindingen:**
+
+- Shopify heeft een toggle tussen **one-page** en **three-page** checkout
+  in Settings → Checkout, beschikbaar voor alle plans. Three-page geeft
+  native "Information / Shipping / Payment"-breadcrumb, maar converteert
+  volgens Shopify's eigen data ~7.5% slechter dan one-page.
+- Checkout UI Extensions die selectief elementen kunnen toevoegen zijn
+  exclusief voor Shopify **Plus** — niet beschikbaar op Basic.
+- Eigen overlay over de Shopify checkout heen mag niet (risico op
+  account-blokkade + tegen Stefan's eis).
+- Alternatief: een "Stap 1 van 3"-banner in de cart-drawer aan onze
+  kant, vóórdat klant naar Shopify-checkout gaat.
+
+**Stefan's beslissing:** **niet doorvoeren**. Reden: nadat we de
+betaalmethoden hadden opgeschoond (zie § 10) vond hij de checkout
+visueel acceptabel — een progress-indicator weegt niet op tegen de
+trade-offs (Shopify-account-risico bij overlay, conversie-verlies bij
+three-page-mode). Punt **afgesloten** binnen Shopify Basic-limits.
+
+---
+
+## 10. Betaalmethoden-cleanup (15 mei 2026)
+
+**Aanleiding:** tijdens onderzoek voor Solo #13 deelde Stefan een
+WhatsApp-screenshot van een klant: *"Ik ben bezig met een bestelling op
+hlty maar je kan alleen met een creditcard betalen (of Paypal). Nog
+geen wero?"* Dit bleek een groter probleem dan de progress-indicator —
+iDEAL/Wero is verreweg dé NL-betaalmethode (~70% van online betalingen).
+
+**Diagnose via Shopify admin:**
+
+- Mollie was wél gekoppeld met iDEAL | Wero geactiveerd
+- Maar in de live checkout zag de klant op top-niveau alleen drie
+  opties: **Creditcard** (Shopify Payments) — **PayPal** — **Mollie -
+  Payments**. iDEAL/Wero zat verstopt **onder** de "Mollie - Payments"-
+  optie. Klanten herkennen dat label niet als iDEAL en pakken Creditcard.
+- Bovendien overlap: Mollie bood óók Visa + Mastercard aan, naast
+  Shopify Payments' creditcard. Plus Bancontact (BE) — niet relevant
+  voor NL-markt.
+
+**Acties uitgevoerd in Shopify admin** (Claude met Stefan's expliciet
+akkoord per stap):
+
+1. ✅ **Visa in Mollie uitgezet** — Shopify Payments verzorgt creditcard
+2. ✅ **Mastercard in Mollie uitgezet** — idem
+3. ✅ **Bancontact in Mollie uitgezet** — niet relevant voor NL-doelgroep
+
+**Resultaat:** Mollie biedt nu alleen nog iDEAL | Wero aan. Cleaner
+checkout, geen dubbele creditcard-opties.
+
+**Wat we niet konden weghalen:**
+
+- **PayPal Express-button bovenaan checkout** (de gele "Snelle checkout"
+  knop). De PayPal-integratie heet letterlijk *PayPal Express Checkout* —
+  het is alles-of-niets. Selectief verbergen kan niet in Shopify Basic
+  zonder PayPal Express helemaal te deactiveren (zou ook PayPal als
+  betaaloptie verwijderen).
+- **Volgorde van betaalmethoden in de checkout** — niet handmatig
+  wijzigbaar in Basic. Shopify bepaalt zelf de volgorde via een
+  priority-algoritme (Shopify Payments primary > Express > Alternative).
+
+**Stefan's keuze:** **laten zoals het is** na de cleanup. PayPal blijft
+gratis, Mollie is nu cleaner zichtbaar als iDEAL/Wero-aanbieder.
+
+---
+
+## 11. Eindstaat fase 6
 
 **Live op productie** (Vercel auto-deploy op `main`):
 
@@ -720,26 +790,14 @@ leggen.
 - Batch A — alle 7 Holland Pharma data-fixes + Shopify collection-rename
 - Solo #14 — Zoekmodal autocomplete met producten/merken/categorieën
 
-**Eerstvolgende actie — Solo #13 — Checkout progress-indicator**
+**Solo #13 + Payment cleanup** (15 mei 2026):
+- Solo #13 afgesloten als "binnen Shopify Basic-limits"
+- Mollie geschoond: alleen iDEAL/Wero nog actief (Visa/Mastercard/Bancontact uit)
 
-| # | Categorie | Onderwerp | Locatie (vermoed) |
-|---|-----------|-----------|-------------------|
-| 13 | UX | Geen checkout progress-indicator | Mogelijk niet oplosbaar — Shopify checkout is buiten onze controle |
+**Resterende roadmap:**
 
-**Onderzoeksvragen bij start:**
-
-- Wat exact zag de AI-testbot? Was het de stap-indicator (Informatie /
-  Verzending / Betaling) die ontbrak, of een algemenere "voortgang"?
-- Shopify checkout draait op `checkout.hlty.shop` — kunnen we daar
-  überhaupt iets aanpassen via thema-settings of Checkout Extensions,
-  of moeten we accepteren dat dit een Shopify-platform-beslissing is?
-- Alternatief: een eigen "Stap 1 van 3"-banner ABOVE de checkout-iframe
-  /-link bij het verlaten van de cart, zodat klanten al weten waar ze
-  staan voordat ze in de Shopify-flow stappen.
-
-**Resterende werkelijkheid:**
-
-1. ⏳ Solo #13 — Checkout indicator *(eerstvolgende — onderzoeksessie)*
-2. ⏭ Eigen Fase 7+ — Productadvisor (#3, #5 + Stefan's extra issues)
-3. ⏭ Eigen Fase 8 — SEO & GEO (#4 meta-titels + Open Graph + structured data)
-4. ⏭ Wishlist — Merken-pagina inrichting (open punt, samen oppakken)
+1. ⏭ Fase 7 — Productadvisor herontwerp *(gestart 15 mei 2026 — zie
+   [07-fase-7-productadvisor.md](./07-fase-7-productadvisor.md))*
+2. ⏭ Fase 8 — Assortiment-onderzoek (vóór SEO/GEO, op verzoek Stefan)
+3. ⏭ Fase 9 — SEO & GEO (#4 meta-titels + Open Graph + structured data)
+4. ⏭ Wishlist — Merken-pagina inrichting

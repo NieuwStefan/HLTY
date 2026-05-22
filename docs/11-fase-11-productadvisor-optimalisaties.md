@@ -97,8 +97,14 @@ samen in de winkelwagen te plaatsen met een kortings-incentive.
 
 ### 1.5 Analytics-events
 
+> **Scope-noot (22 mei 2026):** het *analytics-fundament* — GA4 installeren,
+> Meta Pixel en evt. andere tracking-/conversie-pixels site-breed opzetten
+> (consent-proof) — is verplaatst naar **Fase 10** (zie `README.md`). Wat
+> hieronder valt zijn alleen de **productadvisor-specifieke events** die
+> bovenop dat fundament draaien.
+
 **Wat:** GA4-events op de consultation-flow zodat we kunnen meten wat de
-tool écht oplevert.
+tool écht oplevert. Vereist dat het GA4-fundament uit Fase 10 al staat.
 
 **Minimale set:**
 - `consultation_started` (stap 1 zichtbaar)
@@ -128,7 +134,8 @@ Niet vastgelegd — afhankelijk van wat de feedback-ronde oplevert. Een
 voor de hand liggende volgorde zou zijn:
 
 1. Feedback verwerken (1.1) — direct waarde
-2. Analytics events (1.5) — laag investering, geeft data voor de rest
+2. Analytics-events (1.5) — laag investering, geeft data voor de rest
+   (mits het GA4-fundament uit Fase 10 al staat)
 3. Doserings-keuze (1.3) — relatief simpel, generiek mechanisme staat
 4. Bundle-suggestie (1.4) — vereist kortings-keuze
 5. AI-fallback (Fase 4 / 1.2) — grootste werk, hoogste complexiteit

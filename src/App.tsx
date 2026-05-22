@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
-import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CustomerProvider } from './context/CustomerContext';
 import { CartProvider } from './context/CartContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import CartDrawer from './components/CartDrawer';
+import SiteSchema from './components/SiteSchema';
 import Home from './pages/Home';
 import Collection from './pages/Collection';
 import Product from './pages/Product';
@@ -18,6 +19,7 @@ import Policy from './pages/Policy';
 import Contact from './pages/Contact';
 import NotFound from './pages/NotFound';
 import AllProducts from './pages/AllProducts';
+import Faq from './pages/Faq';
 
 const pageTransition = {
   initial: { opacity: 0, y: 8 },
@@ -36,6 +38,7 @@ export default function App() {
   return (
     <CustomerProvider>
       <CartProvider>
+        <SiteSchema />
         <div className="min-h-screen flex flex-col">
           <Header />
           <CartDrawer />
@@ -55,14 +58,10 @@ export default function App() {
                   <Route path="/beleid/:slug" element={<Policy />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/alle-producten" element={<AllProducts />} />
+                  <Route path="/veelgestelde-vragen" element={<Faq />} />
 
-                  {/* Shopify-legacy URLs → eigen routes */}
-                  <Route path="/account/login" element={<Navigate to="/account" replace />} />
-                  <Route path="/account/register" element={<Navigate to="/account" replace />} />
-                  <Route path="/account/orders" element={<Navigate to="/account" replace />} />
-                  <Route path="/pages/contact" element={<Navigate to="/contact" replace />} />
-
-                  {/* Catch-all 404 */}
+                  {/* Catch-all 404 — Shopify-legacy URLs (/account/login etc.)
+                      worden door Vercel server-side 301-geredirect, zie vercel.json */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </motion.div>

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import HealthConsultation from '../components/HealthConsultation';
 import ProductCard from '../components/ProductCard';
+import SEO from '../components/SEO';
 import { getFeaturedProducts, type Product } from '../lib/shopify';
 
 // ---------- Data ----------
@@ -77,6 +78,12 @@ export default function Home() {
   }, []);
 
   return (
+    <>
+      <SEO
+        title="HLTY — Duidelijkheid in zelfzorg"
+        description="Supplementen, voeding en fysiotherapie-accessoires, geselecteerd door fysiotherapeuten. Alleen wat écht werkt — helder, eerlijk en zonder marketingclaims."
+        path="/"
+      />
     <div className="space-y-16">
       {/* Hero — split layout met productfoto */}
       <section className="relative">
@@ -374,5 +381,6 @@ export default function Home() {
         </motion.div>
       </section>
     </div>
+    </>
   );
 }

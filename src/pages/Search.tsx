@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Search as SearchIcon } from 'lucide-react';
 import { searchProducts, sortByBrandRelevance, type Product, type ProductListResult } from '../lib/shopify';
 import ProductCard from '../components/ProductCard';
+import SEO from '../components/SEO';
 
 export default function Search() {
   const [searchParams] = useSearchParams();
@@ -25,6 +26,13 @@ export default function Search() {
   }, [query]);
 
   return (
+    <>
+      <SEO
+        title={query ? `Zoekresultaten voor "${query}"` : 'Zoeken'}
+        description="Zoek in het HLTY-assortiment van supplementen, voeding en fysio-accessoires — door fysiotherapeuten geselecteerd."
+        path={`/zoeken${query ? `?q=${encodeURIComponent(query)}` : ''}`}
+        noindex
+      />
     <div className="mx-auto max-w-[1400px] px-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -84,5 +92,6 @@ export default function Search() {
         </div>
       )}
     </div>
+    </>
   );
 }

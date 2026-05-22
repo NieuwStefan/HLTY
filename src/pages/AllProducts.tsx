@@ -12,6 +12,8 @@ import {
 } from '../lib/product-categories';
 import ProductCard from '../components/ProductCard';
 import FilterSidebar from '../components/FilterSidebar';
+import SEO from '../components/SEO';
+import JsonLd from '../components/JsonLd';
 import { DIET_OPTIONS } from './Collection';
 
 const PAGE_SIZE = 24;
@@ -225,7 +227,34 @@ export default function AllProducts() {
       .filter((m): m is NonNullable<typeof m> => m !== null);
   }, [selectedMains]);
 
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.hlty.shop/' },
+      { '@type': 'ListItem', position: 2, name: 'Alle producten', item: 'https://www.hlty.shop/alle-producten' },
+    ],
+  };
+  const itemListSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    itemListOrder: 'https://schema.org/ItemListOrderAscending',
+    numberOfItems: filteredProducts.length,
+    itemListElement: filteredProducts.slice(0, 30).map((p, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      url: `https://www.hlty.shop/product/${p.handle}`,
+    })),
+  };
+
   return (
+    <>
+      <SEO
+        title="Alle producten"
+        description="Het volledige HLTY-assortiment: 900+ supplementen, voeding en fysio-accessoires, geselecteerd door fysiotherapeuten — helder, eerlijk en zonder marketingclaims."
+        path="/alle-producten"
+      />
+      <JsonLd data={[breadcrumbSchema, itemListSchema]} />
     <div className="mx-auto max-w-[1400px] px-4 space-y-10">
       {/* Header */}
       <section>
@@ -464,5 +493,6 @@ export default function AllProducts() {
         </div>
       </div>
     </div>
+    </>
   );
 }

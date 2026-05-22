@@ -6,6 +6,8 @@ import { getAllCollectionProducts, getProductCategories, sortByBrandRelevance, t
 import { handlesForMainsAndSubs, productMatchesHandles } from '../lib/product-categories';
 import ProductCard from '../components/ProductCard';
 import FilterSidebar from '../components/FilterSidebar';
+import SEO from '../components/SEO';
+import JsonLd from '../components/JsonLd';
 
 const PAGE_SIZE = 24;
 
@@ -262,14 +264,55 @@ export default function Collection() {
 
   if (!collection) {
     return (
-      <div className="mx-auto max-w-[1400px] px-4 text-center py-20">
-        <h1 className="text-2xl font-bold text-[var(--color-navy)]">Collectie niet gevonden</h1>
-        <p className="text-[var(--color-muted)] mt-2">Deze collectie bestaat niet of is verplaatst.</p>
-      </div>
+      <>
+        <SEO
+          title="Collectie niet gevonden"
+          description="Deze collectie bestaat niet of is verplaatst."
+          path={`/collectie/${handle ?? ''}`}
+          noindex
+        />
+        <div className="mx-auto max-w-[1400px] px-4 text-center py-20">
+          <h1 className="text-2xl font-bold text-[var(--color-navy)]">Collectie niet gevonden</h1>
+          <p className="text-[var(--color-muted)] mt-2">Deze collectie bestaat niet of is verplaatst.</p>
+        </div>
+      </>
     );
   }
 
+  const seoDescription = (collection.description || `Onze geselecteerde ${collection.title.toLowerCase()} bij HLTY — door fysiotherapeuten getoetst. Helder, eerlijk en zonder marketingclaims.`)
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 160);
+
+  const collectionUrl = `https://www.hlty.shop/collectie/${collection.handle}`;
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.hlty.shop/' },
+      { '@type': 'ListItem', position: 2, name: collection.title, item: collectionUrl },
+    ],
+  };
+  const itemListSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    itemListOrder: 'https://schema.org/ItemListOrderAscending',
+    numberOfItems: sortedProducts.length,
+    itemListElement: sortedProducts.slice(0, 30).map((p, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      url: `https://www.hlty.shop/product/${p.handle}`,
+    })),
+  };
+
   return (
+    <>
+      <SEO
+        title={collection.title}
+        description={seoDescription}
+        path={`/collectie/${collection.handle}`}
+      />
+      <JsonLd data={[breadcrumbSchema, itemListSchema]} />
     <div className="mx-auto max-w-[1400px] px-4">
       {/* Header */}
       <motion.div
@@ -457,5 +500,6 @@ export default function Collection() {
         </div>
       </div>
     </div>
+    </>
   );
 }

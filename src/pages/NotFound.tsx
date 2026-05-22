@@ -1,5 +1,6 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ArrowRight, Home } from 'lucide-react';
+import SEO from '../components/SEO';
 
 const SUGGESTED_LINKS = [
   { label: 'Vitamines', href: '/collectie/vitamines-1' },
@@ -9,7 +10,15 @@ const SUGGESTED_LINKS = [
 ];
 
 export default function NotFound() {
+  const location = useLocation();
   return (
+    <>
+      <SEO
+        title="Pagina niet gevonden"
+        description="Deze pagina bestaat niet (meer). Bekijk ons assortiment of ga terug naar de homepage."
+        path={location.pathname}
+        noindex
+      />
     <div className="mx-auto max-w-5xl px-6">
       <section className="glass-dark rounded-[32px] p-6 sm:p-8 md:p-12 relative overflow-hidden mb-8">
         <div className="absolute bottom-0 left-1/4 w-80 h-80 bg-blue-500/10 rounded-full blur-[100px]" />
@@ -64,5 +73,6 @@ export default function NotFound() {
         </div>
       </section>
     </div>
+    </>
   );
 }

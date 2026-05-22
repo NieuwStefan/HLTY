@@ -18,6 +18,7 @@ const GOAL_LINKS = [
 ];
 
 const SERVICE_LINKS = [
+  { label: 'Veelgestelde vragen', href: '/veelgestelde-vragen' },
   { label: 'Verzendbeleid', href: '/beleid/verzending' },
   { label: 'Retour- en terugbetalingsbeleid', href: '/beleid/retour' },
   { label: 'Servicevoorwaarden', href: '/beleid/voorwaarden' },

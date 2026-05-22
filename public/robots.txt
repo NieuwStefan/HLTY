@@ -1,0 +1,48 @@
+# robots.txt — hlty.shop
+# Beleid: alle crawlers welkom, inclusief AI-assistenten.
+# Account- en auth-routes blijven uit het index om privacy te bewaken.
+
+User-agent: *
+Allow: /
+Disallow: /account
+Disallow: /auth/
+Disallow: /welkom
+
+# AI-assistenten expliciet toegestaan (GEO — Generative Engine Optimization).
+# Zonder deze regels kunnen ze HLTY niet citeren in antwoorden op
+# zoekopdrachten zoals "welke supplementen helpen bij slecht slapen".
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+Sitemap: https://www.hlty.shop/sitemap.xml

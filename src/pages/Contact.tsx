@@ -1,8 +1,15 @@
 import { Link } from 'react-router-dom';
 import { Mail, MapPin, Building2, ArrowRight } from 'lucide-react';
+import SEO from '../components/SEO';
 
 export default function Contact() {
   return (
+    <>
+    <SEO
+      title="Contact"
+      description="Vragen over een product, bestelling of advies nodig? Neem contact op met HLTY — we helpen je graag."
+      path="/contact"
+    />
     <div className="mx-auto max-w-5xl px-6">
       <nav className="text-xs text-[var(--color-muted)] mb-8">
         <Link to="/" className="hover:text-[var(--color-navy)] transition-colors">Home</Link>
@@ -114,5 +121,6 @@ export default function Contact() {
         </div>
       </section>
     </div>
+    </>
   );
 }

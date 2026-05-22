@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2, AlertCircle } from 'lucide-react';
+import SEO from '../components/SEO';
 
 // Handles the OAuth redirect back from Shopify.
 // URL shape: /auth/callback?code=...&state=...
@@ -85,25 +86,31 @@ export default function AuthCallback() {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-[480px] px-4 py-12 text-center">
-        <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
-          <AlertCircle className="w-8 h-8 text-red-500" />
+      <>
+        <SEO title="Inloggen mislukt" description="Het inloggen kon niet worden voltooid." path="/auth/callback" noindex />
+        <div className="mx-auto max-w-[480px] px-4 py-12 text-center">
+          <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-red-500" />
+          </div>
+          <h1 className="text-2xl font-extrabold text-[var(--color-navy)] mb-2" style={{ fontFamily: 'Montserrat' }}>
+            Inloggen mislukt
+          </h1>
+          <p className="text-sm text-[var(--color-muted)] mb-6">{error}</p>
+          <button onClick={() => navigate('/account')} className="btn-secondary py-3 px-6">
+            Terug naar account
+          </button>
         </div>
-        <h1 className="text-2xl font-extrabold text-[var(--color-navy)] mb-2" style={{ fontFamily: 'Montserrat' }}>
-          Inloggen mislukt
-        </h1>
-        <p className="text-sm text-[var(--color-muted)] mb-6">{error}</p>
-        <button onClick={() => navigate('/account')} className="btn-secondary py-3 px-6">
-          Terug naar account
-        </button>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="mx-auto max-w-[480px] px-4 py-12 text-center">
-      <Loader2 className="w-8 h-8 text-[var(--color-primary)] animate-spin mx-auto mb-4" />
-      <p className="text-sm text-[var(--color-muted)]">Inloggen afronden...</p>
-    </div>
+    <>
+      <SEO title="Inloggen afronden" description="Even geduld terwijl we je inlogsessie afronden." path="/auth/callback" noindex />
+      <div className="mx-auto max-w-[480px] px-4 py-12 text-center">
+        <Loader2 className="w-8 h-8 text-[var(--color-primary)] animate-spin mx-auto mb-4" />
+        <p className="text-sm text-[var(--color-muted)]">Inloggen afronden...</p>
+      </div>
+    </>
   );
 }

@@ -794,10 +794,23 @@ gratis, Mollie is nu cleaner zichtbaar als iDEAL/Wero-aanbieder.
 - Solo #13 afgesloten als "binnen Shopify Basic-limits"
 - Mollie geschoond: alleen iDEAL/Wero nog actief (Visa/Mastercard/Bancontact uit)
 
-**Resterende roadmap:**
+**Resterende roadmap** (bijgewerkt 20 mei 2026):
 
-1. ⏭ Fase 7 — Productadvisor herontwerp *(gestart 15 mei 2026 — zie
+1. ✅ Fase 7 — Productadvisor herontwerp *(afgerond & live, zie
    [07-fase-7-productadvisor.md](./07-fase-7-productadvisor.md))*
-2. ⏭ Fase 8 — Assortiment-onderzoek (vóór SEO/GEO, op verzoek Stefan)
-3. ⏭ Fase 9 — SEO & GEO (#4 meta-titels + Open Graph + structured data)
-4. ⏭ Wishlist — Merken-pagina inrichting
+2. 🚧 **Fase 8 — SEO & GEO** *(opgepakt 20 mei 2026)* — meta-tags,
+   structured data, sitemap, crawlability + AI-citeerbaarheid in één
+   integrale pass
+3. ⏭ Fase 9 — Assortiment-onderzoek (welke producten/categorieën
+   aanvullen of bijstellen)
+4. ⏭ Fase 10 — SEO/GEO content-pass — alleen bijwerken op punten die
+   Fase 9 raakt; het template-werk uit Fase 8 dekt nieuwe producten
+   automatisch
+5. 🅿️ Fase 11 — Productadvisor post-live optimalisaties *(geparkeerd,
+   zie [11-fase-11-productadvisor-optimalisaties.md](./11-fase-11-productadvisor-optimalisaties.md))*
+6. ⏭ Wishlist — Merken-pagina inrichting
+
+> Volgorde-wijziging 20 mei 2026: SEO/GEO eerst (was Fase 9), dan
+> assortiment-onderzoek (was Fase 8). Reden: SEO-templates dekken
+> nieuwe producten automatisch, dus de tweede content-pass na het
+> assortiment-werk is licht onderhoud i.p.v. een herbouw.

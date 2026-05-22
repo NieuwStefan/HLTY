@@ -5,6 +5,7 @@ import { CheckCircle2, Loader2, AlertCircle, User, MapPin, ShoppingBag } from 'l
 import { useCustomer } from '../context/CustomerContext';
 import { validateZip, validateRequired, normalizeZip } from '../lib/validators';
 import { COUNTRIES } from '../lib/countries';
+import SEO from '../components/SEO';
 
 // Onboarding-pagina voor net geregistreerde klanten.
 //
@@ -155,6 +156,8 @@ export default function Welcome() {
   }
 
   return (
+    <>
+      <SEO title="Welkom" description="Vul je gegevens in om je HLTY-account af te ronden." path="/welkom" noindex />
     <div className="mx-auto max-w-[640px] px-4">
       <motion.div
         initial={{ scale: 0 }}
@@ -317,6 +320,7 @@ export default function Welcome() {
         Je gegevens worden alleen gebruikt voor de afhandeling van je bestellingen.
       </p>
     </div>
+    </>
   );
 }
 

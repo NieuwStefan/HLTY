@@ -9,6 +9,8 @@ import {
   type Product,
 } from '../lib/shopify';
 import ProductCard from '../components/ProductCard';
+import SEO from '../components/SEO';
+import JsonLd from '../components/JsonLd';
 
 export default function Brand() {
   const { brand: brandParam } = useParams<{ brand: string }>();
@@ -82,7 +84,36 @@ export default function Brand() {
 
   if (!brand) return null;
 
+  const brandUrl = `https://www.hlty.shop/merken/${brand.handle}`;
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.hlty.shop/' },
+      { '@type': 'ListItem', position: 2, name: 'Merken', item: 'https://www.hlty.shop/' },
+      { '@type': 'ListItem', position: 3, name: brand.name, item: brandUrl },
+    ],
+  };
+  const itemListSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    itemListOrder: 'https://schema.org/ItemListOrderAscending',
+    numberOfItems: products.length,
+    itemListElement: products.slice(0, 30).map((p, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      url: `https://www.hlty.shop/product/${p.handle}`,
+    })),
+  };
+
   return (
+    <>
+      <SEO
+        title={`${brand.name} bij HLTY`}
+        description={`Ontdek het ${brand.name}-assortiment bij HLTY. Onze fysiotherapeuten selecteerden alleen wat écht werkt — helder, eerlijk en zonder marketingclaims.`}
+        path={`/merken/${brand.handle}`}
+      />
+      <JsonLd data={[breadcrumbSchema, itemListSchema]} />
     <div className="mx-auto max-w-[1400px] px-4">
       {/* Breadcrumb */}
       <nav className="mb-6 flex items-center gap-1.5 text-sm text-[var(--color-muted)]">
@@ -136,5 +167,6 @@ export default function Brand() {
         </div>
       )}
     </div>
+    </>
   );
 }

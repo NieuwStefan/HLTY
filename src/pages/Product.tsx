@@ -14,6 +14,8 @@ import { useCart } from '../context/CartContext';
 import ProductCard from '../components/ProductCard';
 import ProductDescription from '../components/ProductDescription';
 import BrandSection from '../components/BrandSection';
+import SEO from '../components/SEO';
+import JsonLd from '../components/JsonLd';
 import { getBrand } from '../data/brands';
 import { findPrimaryCategory } from '../lib/categories';
 import { formatProductTitle } from '../lib/product-title';
@@ -114,9 +116,17 @@ export default function Product() {
 
   if (!product) {
     return (
-      <div className="mx-auto max-w-[1400px] px-4 text-center py-20">
-        <h1 className="text-2xl font-bold">Product niet gevonden</h1>
-      </div>
+      <>
+        <SEO
+          title="Product niet gevonden"
+          description="Dit product staat niet (meer) in het HLTY-assortiment."
+          path={`/product/${handle ?? ''}`}
+          noindex
+        />
+        <div className="mx-auto max-w-[1400px] px-4 text-center py-20">
+          <h1 className="text-2xl font-bold">Product niet gevonden</h1>
+        </div>
+      </>
     );
   }
 
@@ -149,8 +159,95 @@ export default function Product() {
     if (fb) breadcrumbCategory = { handle: fb.handle, label: fb.label };
   }
 
+  const seoTitle = formatProductTitle(product.title);
+  const seoDescription = (product.description || `${seoTitle} bij HLTY — door fysiotherapeuten geselecteerd assortiment.`)
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 160);
+
+  // JSON-LD: Product schema + BreadcrumbList
+  const productUrl = `https://www.hlty.shop/product/${product.handle}`;
+  const variantPrices = product.variants
+    .map((v) => parseFloat(v.price.amount))
+    .filter((n) => Number.isFinite(n));
+  const lowPrice = variantPrices.length ? Math.min(...variantPrices).toFixed(2) : undefined;
+  const highPrice = variantPrices.length ? Math.max(...variantPrices).toFixed(2) : undefined;
+  const currency = product.variants[0]?.price.currencyCode || 'EUR';
+  const anyInStock = product.variants.some((v) => v.availableForSale);
+
+  const productSchema: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: seoTitle,
+    description: seoDescription,
+    image: product.images.map((i) => i.url).slice(0, 6),
+    sku: product.variants[0]?.id,
+    url: productUrl,
+    ...(product.vendor ? { brand: { '@type': 'Brand', name: product.vendor } } : {}),
+    ...(lowPrice && highPrice
+      ? {
+          offers: lowPrice === highPrice
+            ? {
+                '@type': 'Offer',
+                url: productUrl,
+                priceCurrency: currency,
+                price: lowPrice,
+                availability: anyInStock
+                  ? 'https://schema.org/InStock'
+                  : 'https://schema.org/OutOfStock',
+              }
+            : {
+                '@type': 'AggregateOffer',
+                url: productUrl,
+                priceCurrency: currency,
+                lowPrice,
+                highPrice,
+                offerCount: product.variants.length,
+                availability: anyInStock
+                  ? 'https://schema.org/InStock'
+                  : 'https://schema.org/OutOfStock',
+              },
+        }
+      : {}),
+  };
+
+  const breadcrumbItems: { name: string; url: string }[] = [
+    { name: 'Home', url: 'https://www.hlty.shop/' },
+  ];
+  if (breadcrumbCategory) {
+    breadcrumbItems.push({
+      name: breadcrumbCategory.label,
+      url: `https://www.hlty.shop/collectie/${breadcrumbCategory.handle}`,
+    });
+  } else if (fromBrand && brandHandle) {
+    breadcrumbItems.push({
+      name: product.vendor,
+      url: `https://www.hlty.shop/merken/${brandHandle}`,
+    });
+  }
+  breadcrumbItems.push({ name: seoTitle, url: productUrl });
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: breadcrumbItems.map((it, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: it.name,
+      item: it.url,
+    })),
+  };
+
   return (
     <>
+      <SEO
+        title={seoTitle}
+        description={seoDescription}
+        path={`/product/${product.handle}`}
+        image={product.images[0]?.url}
+        type="product"
+      />
+      <JsonLd data={[productSchema, breadcrumbSchema]} />
       <div className="mx-auto max-w-[1400px] px-4 space-y-16">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-[var(--color-muted)]">

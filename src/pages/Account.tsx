@@ -29,6 +29,7 @@ import { useCart } from '../context/CartContext';
 import { validatePhone, validateZip, validateRequired, normalizeZip } from '../lib/validators';
 import { COUNTRIES, countryName } from '../lib/countries';
 import Checkbox from '../components/Checkbox';
+import SEO from '../components/SEO';
 
 interface OrderLineItem {
   title: string;
@@ -72,11 +73,21 @@ type Tab = 'overview' | 'orders' | 'profile';
 export default function Account() {
   const { isLoggedIn, customer, isLoading, error, login, logout, switchUser } = useCustomer();
 
-  if (!isLoggedIn) return <LoginPrompt onLogin={() => login('/account')} />;
-  if (isLoading && !customer) return <FullPageLoader />;
+  let body;
+  if (!isLoggedIn) body = <LoginPrompt onLogin={() => login('/account')} />;
+  else if (isLoading && !customer) body = <FullPageLoader />;
+  else body = <Dashboard customer={customer} error={error} onLogout={logout} onSwitchUser={switchUser} />;
 
   return (
-    <Dashboard customer={customer} error={error} onLogout={logout} onSwitchUser={switchUser} />
+    <>
+      <SEO
+        title="Mijn account"
+        description="Beheer je HLTY-account: bestellingen, adressen en gegevens."
+        path="/account"
+        noindex
+      />
+      {body}
+    </>
   );
 }
 

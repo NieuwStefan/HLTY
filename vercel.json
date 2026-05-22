@@ -1,5 +1,12 @@
 {
+  "redirects": [
+    { "source": "/account/login", "destination": "/account", "permanent": true },
+    { "source": "/account/register", "destination": "/account", "permanent": true },
+    { "source": "/account/orders", "destination": "/account", "permanent": true },
+    { "source": "/pages/contact", "destination": "/contact", "permanent": true }
+  ],
   "rewrites": [
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

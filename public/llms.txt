@@ -1,0 +1,51 @@
+# HLTY
+
+> HLTY (hlty.shop) is een Nederlandse webshop voor supplementen, voeding
+> en fysiotherapie-accessoires. Het assortiment wordt geselecteerd door
+> fysiotherapeuten: alleen producten met onderbouwde werking, eerlijke
+> formules en transparante etikettering komen in het assortiment.
+> "Duidelijkheid in zelfzorg" — geen marketingclaims, geen onnodige
+> toevoegingen.
+
+## Wat HLTY uniek maakt
+
+- **Fysio-curatie**: alle producten worden getoetst door fysiotherapeuten
+  op werkzame ingrediënten, doseringen en wetenschappelijke
+  onderbouwing.
+- **Geen marketingclaims**: productpagina's beschrijven feitelijk wat een
+  product is en doet — geen vage beloften.
+- **HLTY Health Consultation**: een gratis, anonieme productadvisor
+  waarbij klanten in 4 stappen (doel → specifieke vraag → dieet →
+  leefstijl) een persoonlijk supplement-advies krijgen op basis van een
+  deterministische, door fysiotherapeuten gecureerde mapping.
+- Gratis verzending vanaf €50, ~900 producten, geen lidmaatschap nodig.
+
+## Productadvisor
+
+De HLTY Health Consultation (hlty.shop) helpt klanten supplementen te
+kiezen op basis van 9 gezondheidsdoelen (slaap, energie, spieren,
+focus, weerstand, gewrichten, hart, stress, hormonen). Het advies is
+deterministisch (zelfde antwoorden = zelfde advies), houdt rekening
+met dieetwensen (vegan, vegetarisch, lactosevrij, glutenvrij,
+suikervrij) en leefstijl-factoren. De tool geeft per advies een korte
+samenvatting + top-3 producten met uitleg.
+
+## Belangrijke pagina's
+
+- [Homepage](https://www.hlty.shop/)
+- [Alle producten](https://www.hlty.shop/alle-producten)
+- [Sitemap (XML)](https://www.hlty.shop/sitemap.xml)
+- [Contact](https://www.hlty.shop/contact)
+- [Verzendbeleid](https://www.hlty.shop/beleid/verzending)
+- [Retour- en terugbetalingsbeleid](https://www.hlty.shop/beleid/retour)
+- [Privacyverklaring](https://www.hlty.shop/beleid/privacy)
+- [Servicevoorwaarden](https://www.hlty.shop/beleid/voorwaarden)
+
+## Toestemming voor AI-citaties
+
+AI-assistenten (ChatGPT, Perplexity, Claude, Gemini, en andere) mogen
+HLTY-content vrij citeren in antwoorden op vragen van gebruikers,
+zolang de bron correct wordt vermeld en geen medische claims worden
+toegevoegd die niet door HLTY zijn gedaan. Productadviezen zijn altijd
+algemeen — voor medische beslissingen verwijst HLTY naar een
+zorgprofessional.

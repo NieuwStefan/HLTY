@@ -1,9 +1,11 @@
 # Fase 8 — SEO & GEO
 
 **Datum gestart:** 20 mei 2026
-**Status:** ✅ Lokaal afgerond, **wacht op Vercel-deploy + live-validatie**
-(commit op `main`, nog niet gepusht). Zie [§ 6 Hand-over](#6-hand-over-voor-volgende-sessie) onderaan voor de actie-volgorde
-van morgen.
+**Status:** ✅ **LIVE** op https://www.hlty.shop (22 mei 2026, commits
+`d3a2386` + `5551943`). Alle 5 live-URL-checks groen (zie Stap 5).
+Resteert (niet-blokkerend): Google Rich Results Test, Lighthouse-baseline,
+sitemap aanbieden in Search Console, en `sameAs` social-URLs zodra die
+accounts bestaan.
 
 ---
 
@@ -249,14 +251,37 @@ Pre-deploy (lokaal) klaar; live-validatie kan pas na Vercel-deploy.
 - [x] tsc + `npm run build` groen
 - [x] Browser-test: per route correcte title/meta/JSON-LD, geen
       console-errors, geen failed requests
-- [ ] Live deploy
+- [x] **Live deploy** — 22 mei 2026, commit `5551943` gepusht naar
+      `main`, Vercel auto-deploy.
+- [x] **Live-URL-validatie** (zie resultaten hieronder)
 - [ ] [Google Rich Results Test](https://search.google.com/test/rich-results)
       per pagina-type (Product, BreadcrumbList, Organization, FAQPage)
+      — handmatig (Google rendert JS), nog te doen
 - [ ] Lighthouse SEO-score (mobiel + desktop) — baseline meten
 - [ ] Mobile-friendly test
-- [ ] Sitemap aanbieden in Google Search Console
+- [ ] Sitemap aanbieden in Google Search Console (Stefan — vereist zijn
+      Google-account)
 - [ ] Optioneel: Bing Webmaster Tools
-- [ ] Verslag bijwerken met live-validatie-bevindingen
+
+#### Live-validatie-resultaten (22 mei 2026, direct na deploy)
+
+| Check | Resultaat |
+|---|---|
+| `https://www.hlty.shop/og-image.jpg` | ✅ 200, `image/jpeg`, 150.939 bytes (= het gepushte bestand, bevestigt nieuwe build live) |
+| `https://www.hlty.shop/robots.txt` | ✅ 200, `text/plain`, AI-bot-allowlist aanwezig |
+| `https://www.hlty.shop/sitemap.xml` | ✅ 200, `application/xml`, **1088 `<loc>`-entries** |
+| `https://www.hlty.shop/llms.txt` | ✅ 200 |
+| `https://www.hlty.shop/account/login` | ✅ **308** → `/account` (zie noot) |
+
+**Noot 301 vs 308:** Vercel serveert permanente redirects als **308**, niet
+301. Dat is correct en voor SEO gelijkwaardig — 308 behoudt bovendien de
+HTTP-methode. Geen actie nodig.
+
+**JSON-LD / FAQ-schema:** `/veelgestelde-vragen` en alle JSON-LD worden
+client-side door React gerenderd (SPA), dus niet via `curl` te zien — de
+productie-code is identiek aan de lokaal geverifieerde build, dus
+functioneel gedekt. Definitieve validatie via Google Rich Results Test
+(rendert JS) staat hierboven nog open.
 
 ---
 
@@ -275,11 +300,11 @@ Pre-deploy (lokaal) klaar; live-validatie kan pas na Vercel-deploy.
 
 | Stap | Status |
 |---|---|
-| 1 — Fundamenten | ✅ Code klaar, wacht op Vercel deploy + validatie van live sitemap |
-| 2 — Per-pagina head | ✅ Code klaar + browser-getest (lokaal) |
-| 3 — Structured data | ✅ Code klaar (contactPoint nu ingevuld; KvK/adres/social optioneel later) |
-| 4 — GEO-laag | ✅ robots.txt + llms.txt + FAQ-pagina klaar |
-| 5 — Validatie | ✅ Lokaal alles getest, **klaar voor live deploy** |
+| 1 — Fundamenten | ✅ Live — sitemap (1088 URLs), robots.txt, redirects gevalideerd |
+| 2 — Per-pagina head | ✅ Live — per-route meta + OG-image (1200×628) |
+| 3 — Structured data | ✅ Live — Organization compleet (KvK/RSIN/BTW/adres); `sameAs` volgt na social |
+| 4 — GEO-laag | ✅ Live — robots.txt + llms.txt + FAQ-pagina |
+| 5 — Validatie | ✅ Live-URL-checks groen; Rich Results Test + Lighthouse + Search Console resteren (handmatig) |
 
 ---
 

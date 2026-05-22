@@ -4,12 +4,9 @@
 // globale schema deelt. Voor pagina-specifieke schemas (Product,
 // BreadcrumbList, ItemList) gebruik <JsonLd /> op de pagina zelf.
 //
-// TODO Stefan — vul aan met echte bedrijfsgegevens:
-//   - KvK-nummer (vereist voor Wettelijke kennisgeving + Schema legalName)
-//   - Telefoon en e-mail voor contactPoint
-//   - Sociale-media-URLs voor sameAs (Instagram, Facebook, LinkedIn, etc.)
-// De huidige placeholders worden door Google getolereerd maar lever
-// minder rich-result-eigenschappen op.
+// Bedrijfsgegevens (KvK, RSIN, BTW, adres) komen uit het KvK-uittreksel
+// en zijn gelijk aan de wettelijke kennisgeving in src/lib/policy-content.ts.
+// Nog open: sameAs (Instagram/Facebook/LinkedIn) zodra die accounts bestaan.
 
 import JsonLd from './JsonLd';
 
@@ -20,13 +17,28 @@ const organization = {
   '@type': 'OnlineStore',
   '@id': `${SITE_URL}/#organization`,
   name: 'HLTY',
+  legalName: 'HLTY VOF',
   alternateName: 'HLTY — Duidelijkheid in zelfzorg',
   url: SITE_URL,
   logo: `${SITE_URL}/logo.png`,
-  image: `${SITE_URL}/images/hlty-banner.png`,
+  image: `${SITE_URL}/og-image.jpg`,
   description:
     'Supplementen, voeding en fysiotherapie-accessoires, geselecteerd door fysiotherapeuten. Alleen wat écht werkt — helder, eerlijk en zonder marketingclaims.',
   slogan: 'Duidelijkheid in zelfzorg',
+  taxID: '868426192',
+  vatID: 'NL868426192B01',
+  identifier: {
+    '@type': 'PropertyValue',
+    propertyID: 'KvK',
+    value: '98276441',
+  },
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: 'Skrokdam 5',
+    postalCode: '8918 LB',
+    addressLocality: 'Leeuwarden',
+    addressCountry: 'NL',
+  },
   contactPoint: [
     {
       '@type': 'ContactPoint',
@@ -36,10 +48,8 @@ const organization = {
       availableLanguage: ['Dutch'],
     },
   ],
-  // Aanvullende velden bewust nog niet ingevuld (KvK, adres, sameAs).
-  // Voeg toe wanneer Stefan deze in het schema wil opnemen — KvK en
-  // adres staan al wel in `src/lib/policy-content.ts` voor de wettelijke
-  // kennisgeving, dus content-zijde is gedekt.
+  // sameAs (social-profielen) volgt zodra Stefan Instagram/Facebook/
+  // LinkedIn heeft aangemaakt — voeg dan een sameAs-array toe.
 };
 
 const website = {

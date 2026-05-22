@@ -265,8 +265,8 @@ Pre-deploy (lokaal) klaar; live-validatie kan pas na Vercel-deploy.
 | # | Beslissing | Status |
 |---|---|---|
 | 1 | Sitemap-scope | ✅ Vastgelegd: alle producten + collecties + brand-vendors + 9 static pages |
-| 2 | OG-image-strategie (vast vs dynamisch) | Voorlopig: bestaande `hlty-banner.png` als fallback + Shopify CDN-image per product. Dedicated 1200×630 OG-asset is nice-to-have (later). |
-| 3 | Organization-gegevens (KvK, contact, social) | **Open — Stefan moet aanleveren** (zie TODO-comments in `src/components/SiteSchema.tsx`): KvK-nummer, BTW-nummer (optioneel), telefoon, e-mail, fysiek adres, social URLs (Instagram, Facebook, LinkedIn) |
+| 2 | OG-image-strategie (vast vs dynamisch) | ✅ Opgelost (22 mei): dedicated 1200×628 banner van Stefan als `public/og-image.jpg`, ingesteld als `DEFAULT_OG_IMAGE` in `SEO.tsx` (og + twitter) + Organization `image`. Shopify CDN-image blijft per product de override. |
+| 3 | Organization-gegevens (KvK, contact, social) | ✅ Grotendeels gedaan (22 mei): KvK 98276441, RSIN/taxID, BTW/vatID, PostalAddress, legalName "HLTY VOF", telefoon + e-mail nu in `SiteSchema.tsx`. **Resteert:** `sameAs` social-URLs zodra Stefan Instagram/Facebook/LinkedIn heeft aangemaakt (laag-prio, niet blokkerend). |
 | 4 | Dedicated FAQ-pagina maken? | ✅ Gekozen voor JA — 8 vragen op `/veelgestelde-vragen` met FAQPage JSON-LD |
 
 ---

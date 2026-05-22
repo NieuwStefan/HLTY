@@ -15,7 +15,7 @@
 // Single source of truth voor de canonical hostname:
 
 const SITE_URL = 'https://www.hlty.shop';
-const DEFAULT_OG_IMAGE = `${SITE_URL}/images/hlty-banner.png`;
+const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.jpg`;
 const BRAND_SUFFIX = ' | HLTY';
 
 interface SEOProps {

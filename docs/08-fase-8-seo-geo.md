@@ -1,10 +1,11 @@
 # Fase 8 — SEO & GEO
 
 **Datum gestart:** 20 mei 2026
-**Status:** ✅ **LIVE** op https://www.hlty.shop (22 mei 2026, commits
-`d3a2386` + `5551943`). Alle 5 live-URL-checks groen (zie Stap 5).
-Resteert (niet-blokkerend): Google Rich Results Test, Lighthouse-baseline,
-sitemap aanbieden in Search Console, en `sameAs` social-URLs zodra die
+**Status:** ✅ **LIVE + gevalideerd** op https://www.hlty.shop (22 mei 2026).
+Alle 5 live-URL-checks groen, Rich Results Test groen voor home/product/FAQ,
+Search Console-property geverifieerd + sitemap aangeboden. Resteert
+(niet-blokkerend): Lighthouse-baseline (PageSpeed was geblokkeerd),
+indexering aanvragen via URL-inspectie, en `sameAs` social-URLs zodra die
 accounts bestaan.
 
 ---
@@ -254,13 +255,14 @@ Pre-deploy (lokaal) klaar; live-validatie kan pas na Vercel-deploy.
 - [x] **Live deploy** — 22 mei 2026, commit `5551943` gepusht naar
       `main`, Vercel auto-deploy.
 - [x] **Live-URL-validatie** (zie resultaten hieronder)
-- [ ] [Google Rich Results Test](https://search.google.com/test/rich-results)
-      per pagina-type (Product, BreadcrumbList, Organization, FAQPage)
-      — handmatig (Google rendert JS), nog te doen
+- [x] **[Google Rich Results Test](https://search.google.com/test/rich-results)**
+      per pagina-type — alle valide (zie resultaten hieronder)
+- [x] **Google Search Console** — property `https://www.hlty.shop`
+      geverifieerd (HTML tag in `index.html`) + sitemap aangeboden
+      (zie resultaten hieronder)
 - [ ] Lighthouse SEO-score (mobiel + desktop) — baseline meten
-- [ ] Mobile-friendly test
-- [ ] Sitemap aanbieden in Google Search Console (Stefan — vereist zijn
-      Google-account)
+      (PageSpeed Insights geblokkeerd door browser-extensie-allowlist;
+      nog handmatig te doen)
 - [ ] Optioneel: Bing Webmaster Tools
 
 #### Live-validatie-resultaten (22 mei 2026, direct na deploy)
@@ -278,10 +280,38 @@ Pre-deploy (lokaal) klaar; live-validatie kan pas na Vercel-deploy.
 HTTP-methode. Geen actie nodig.
 
 **JSON-LD / FAQ-schema:** `/veelgestelde-vragen` en alle JSON-LD worden
-client-side door React gerenderd (SPA), dus niet via `curl` te zien — de
-productie-code is identiek aan de lokaal geverifieerde build, dus
-functioneel gedekt. Definitieve validatie via Google Rich Results Test
-(rendert JS) staat hierboven nog open.
+client-side door React gerenderd (SPA), dus niet via `curl` te zien — wél
+gevalideerd via de Rich Results Test (die rendert JS), zie hieronder.
+
+#### Rich Results Test-resultaten (22 mei 2026)
+
+Google crawlde + renderde elke pagina succesvol; alle structured data valide:
+
+| Pagina | Gedetecteerde valide items |
+|---|---|
+| `/` (home) | Organization |
+| `/product/...` | Product snippets, Merchant listings, Breadcrumbs, Organization |
+| `/veelgestelde-vragen` | FAQ, Breadcrumbs, Organization |
+
+**Non-critical (productpagina):** ontbrekende optionele velden `review` +
+`aggregateRating`. Vereisen een reviewsysteem (sterren-beoordelingen) dat
+HLTY nog niet heeft — product is volledig valide en rich-result-eligible.
+Toekomstige verbetering wanneer reviews worden toegevoegd.
+
+#### Google Search Console (22 mei 2026)
+
+- **Property:** `https://www.hlty.shop` (URL-prefix) — **geverifieerd** via
+  HTML tag. De `<meta name="google-site-verification" ...>` staat statisch
+  in `index.html` (commit `9030bd3`) — **niet verwijderen**, anders vervalt
+  de verificatie.
+- **Sitemap aangeboden:** `sitemap.xml`. Status direct na submit:
+  *"Couldn't fetch"* — dit is Google's bekende tijdelijke placeholder
+  (Last read leeg = nog niet opgehaald). Onze endpoint is gezond
+  geverifieerd (HTTP 200, valide XML, 1,37s koud / 0,25s warm), dus geen
+  probleem aan onze kant. Status flipt doorgaans binnen een dag naar
+  "Success".
+- **Nog te doen (optioneel):** indexering aanvragen via URL-inspectie voor
+  home + FAQ + enkele producten; Lighthouse-baseline.
 
 ---
 

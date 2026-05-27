@@ -68,10 +68,13 @@ function devLog(event: string, params?: unknown) {
 // Tracker-loaders (idempotent, draaien alleen ná consent)
 // ---------------------------------------------------------------------------
 
-function gtag(...args: unknown[]) {
+function gtag(..._args: unknown[]) {
   window.dataLayer = window.dataLayer || [];
-  // GA verwacht het letterlijke `arguments`-object, niet een array.
-  window.dataLayer.push(args);
+  // gtag.js verwerkt ALLEEN het letterlijke `arguments`-object; een gewone
+  // array wordt genegeerd, waardoor GA4 nooit configureert (geen _ga-cookie,
+  // geen hits). Daarom `arguments` pushen i.p.v. de rest-parameter-array.
+  // eslint-disable-next-line prefer-rest-params
+  window.dataLayer.push(arguments);
 }
 
 function loadGA() {

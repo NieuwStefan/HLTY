@@ -2,9 +2,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useCustomer } from '../context/CustomerContext';
-import { formatPrice } from '../lib/shopify';
+import { useConsent } from '../context/ConsentContext';
+import { formatPrice, updateCartAttributes } from '../lib/shopify';
 import { formatProductTitle } from '../lib/product-title';
 import { trackBeginCheckout } from '../lib/analytics';
+import { buildCheckoutAttributes } from '../lib/tracking-attributes';
 
 // Appends customer-data query params to the Shopify checkout URL so that
 // e-mail and shipping fields are pre-filled when the buyer arrives. This
@@ -35,9 +37,18 @@ function buildPrefilledCheckoutUrl(
   return url.toString();
 }
 
+// Tracking-attributen wegschrijven mag de checkout nooit ophouden: na deze
+// tijd navigeren we sowieso door, ook als Shopify traag/onbereikbaar is.
+const ATTR_WRITE_TIMEOUT_MS = 1500;
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | void> {
+  return Promise.race([p, new Promise<void>((resolve) => setTimeout(resolve, ms))]);
+}
+
 export default function CartDrawer() {
   const { cart, isOpen, closeCart, isLoading, updateItem, removeItem } = useCart();
   const { customer } = useCustomer();
+  const { consent } = useConsent();
 
   const lines = cart?.lines || [];
   const subtotal = cart?.cost?.subtotalAmount;
@@ -45,9 +56,12 @@ export default function CartDrawer() {
     ? buildPrefilledCheckoutUrl(cart.checkoutUrl, customer)
     : '#';
 
-  // Analytics — begin_checkout vlak vóór de navigatie naar Shopify-checkout.
-  // (Het purchase-event valt buiten de SPA en wordt Shopify-zijdig getrackt.)
-  const handleCheckoutClick = () => {
+  // Bij afrekenen: begin_checkout-event + tracking-stitching-attributen op de
+  // cart zetten (worden order-note_attributes voor de server-side Purchase-
+  // webhook). Het purchase-event zelf valt buiten de SPA en wordt Shopify-
+  // zijdig getrackt. Het wegschrijven is best-effort: faalt of duurt het te
+  // lang, dan navigeren we alsnog door naar de Shopify-checkout.
+  const handleCheckoutClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (!cart || lines.length === 0) return;
     const amount = cart.cost?.totalAmount ?? cart.cost?.subtotalAmount;
     trackBeginCheckout(
@@ -61,6 +75,17 @@ export default function CartDrawer() {
       })),
       amount?.currencyCode,
     );
+
+    const attributes = buildCheckoutAttributes({ consent, customerId: customer?.id });
+    if (attributes.length === 0) return; // niets te stitchen → laat de <a> z'n werk doen
+
+    e.preventDefault();
+    try {
+      await withTimeout(updateCartAttributes(cart.id, attributes), ATTR_WRITE_TIMEOUT_MS);
+    } catch {
+      /* best-effort — tracking mag de checkout nooit blokkeren */
+    }
+    window.location.href = checkoutHref;
   };
 
   return (

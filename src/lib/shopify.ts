@@ -731,6 +731,28 @@ export async function addToCart(cartId: string, variantId: string, quantity = 1)
   return { ...cart, lines: reshapeCartLines(cart.lines) };
 }
 
+// Schrijft custom attributes naar de cart. Deze worden bij checkout de
+// order-`note_attributes`, die de server-side Purchase-webhook uitleest
+// (zie api/shopify-order-webhook.ts). Gebruikt voor tracking-stitching
+// (_fbp/_fbc/_ga_client_id/_external_id). Underscore-prefix = verborgen voor
+// de klant op de orderbevestiging, maar wél in de webhook-payload.
+// Best-effort: faalt dit, dan gaat de checkout gewoon door (zonder stitching).
+export async function updateCartAttributes(
+  cartId: string,
+  attributes: { key: string; value: string }[],
+): Promise<void> {
+  if (attributes.length === 0) return;
+  await shopifyFetch<any>(
+    `mutation CartAttributesUpdate($cartId: ID!, $attributes: [AttributeInput!]!) {
+      cartAttributesUpdate(cartId: $cartId, attributes: $attributes) {
+        cart { id }
+        userErrors { field message }
+      }
+    }`,
+    { cartId, attributes }
+  );
+}
+
 export async function updateCartLine(cartId: string, lineId: string, quantity: number): Promise<Cart> {
   const data = await shopifyFetch<any>(
     `${CART_FRAGMENT}

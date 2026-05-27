@@ -21,9 +21,9 @@
 //   GA4_API_SECRET           optioneel — Measurement Protocol API secret
 //
 // Optioneel (betere stitching): als de storefront bij begin_checkout de
-// GA client-id / Meta _fbp meegeeft als order-note_attributes (_ga_client_id,
-// _fbp, _fbc), pikt deze functie die op. Zonder die velden matcht Meta op
-// e-mail en gebruikt GA4 een gegenereerde client-id.
+// GA client-id / Meta-cookies meegeeft als order-note_attributes
+// (_ga_client_id, _fbp, _fbc, _external_id), pikt deze functie die op. Zonder
+// die velden matcht Meta op e-mail en gebruikt GA4 een gegenereerde client-id.
 
 import crypto from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
@@ -138,6 +138,12 @@ async function sendMetaPurchase(order: ShopifyOrder): Promise<void> {
   const fbc = noteAttr(order, '_fbc');
   if (fbp) userData.fbp = fbp;
   if (fbc) userData.fbc = fbc;
+
+  // external_id — stabiele bezoeker-/klant-id meegegeven door de storefront.
+  // Gehasht (zoals Meta voor external_id aanbeveelt) → hogere Event Match
+  // Quality, dus betere ad-optimalisatie/attributie.
+  const externalId = noteAttr(order, '_external_id');
+  if (externalId) userData.external_id = [sha256(clean(externalId))];
 
   const contents = (order.line_items || []).map((li) => ({
     id: String(li.product_id ?? li.variant_id ?? ''),

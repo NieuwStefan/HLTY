@@ -11,6 +11,7 @@ import {
 } from '../lib/shopify';
 import { CART_ID_KEY } from '../lib/cart-storage';
 import { COOKIES } from '../lib/customer-auth-shared';
+import { trackAddToCart } from '../lib/analytics';
 
 interface CartContextType {
   cart: Cart | null;
@@ -94,6 +95,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       saveCart(newCart);
       setIsOpen(true);
+
+      // Analytics — add_to_cart (no-op zonder consent, zie lib/analytics.ts).
+      const line = newCart.lines.find((l) => l.merchandise.id === variantId);
+      if (line) {
+        trackAddToCart(
+          {
+            id: line.merchandise.id,
+            name: line.merchandise.product.title,
+            brand: line.merchandise.product.vendor,
+            price: parseFloat(line.merchandise.price.amount),
+            quantity,
+          },
+          line.merchandise.price.currencyCode,
+        );
+      }
     } finally {
       setIsLoading(false);
     }

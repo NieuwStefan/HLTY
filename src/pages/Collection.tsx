@@ -8,6 +8,8 @@ import ProductCard from '../components/ProductCard';
 import FilterSidebar from '../components/FilterSidebar';
 import SEO from '../components/SEO';
 import JsonLd from '../components/JsonLd';
+import RelatedCategories from '../components/RelatedCategories';
+import { buildMetaDescription } from '../lib/seo';
 
 const PAGE_SIZE = 24;
 
@@ -279,10 +281,10 @@ export default function Collection() {
     );
   }
 
-  const seoDescription = (collection.description || `Onze geselecteerde ${collection.title.toLowerCase()} bij HLTY — door fysiotherapeuten getoetst. Helder, eerlijk en zonder marketingclaims.`)
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 160);
+  const seoDescription = buildMetaDescription(
+    collection.description ||
+      `${collection.title} bij HLTY — door fysiotherapeuten geselecteerd uit duizenden producten. Helder, eerlijk en zonder marketingclaims.`,
+  );
 
   const collectionUrl = `https://www.hlty.shop/collectie/${collection.handle}`;
   const breadcrumbSchema = {
@@ -499,6 +501,8 @@ export default function Collection() {
           )}
         </div>
       </div>
+
+      <RelatedCategories excludeHandle={collection.handle} />
     </div>
     </>
   );

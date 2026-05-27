@@ -11,6 +11,9 @@ import {
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
 import JsonLd from '../components/JsonLd';
+import { getBrand } from '../data/brands';
+import { buildMetaDescription } from '../lib/seo';
+import RelatedCategories from '../components/RelatedCategories';
 
 export default function Brand() {
   const { brand: brandParam } = useParams<{ brand: string }>();
@@ -84,6 +87,17 @@ export default function Brand() {
 
   if (!brand) return null;
 
+  // Gecureerde merk-content (tagline/verhaal/pijlers) uit src/data/brands.ts.
+  // Niet elk merk heeft een record — dan valt alles terug op generieke tekst.
+  const content = getBrand(brand.handle);
+
+  const fallbackDescription = `Ontdek het ${brand.name}-assortiment bij HLTY. Onze fysiotherapeuten selecteerden alleen wat écht werkt — helder, eerlijk en zonder marketingclaims.`;
+  const seoDescription = content
+    ? buildMetaDescription(
+        `${brand.name} bij HLTY — ${content.tagline ? `${content.tagline}. ` : ''}${content.story}`,
+      )
+    : fallbackDescription;
+
   const brandUrl = `https://www.hlty.shop/merken/${brand.handle}`;
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
@@ -97,6 +111,8 @@ export default function Brand() {
   const itemListSchema = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
+    name: `${brand.name} bij HLTY`,
+    ...(content ? { description: content.story } : {}),
     itemListOrder: 'https://schema.org/ItemListOrderAscending',
     numberOfItems: products.length,
     itemListElement: products.slice(0, 30).map((p, i) => ({
@@ -110,7 +126,7 @@ export default function Brand() {
     <>
       <SEO
         title={`${brand.name} bij HLTY`}
-        description={`Ontdek het ${brand.name}-assortiment bij HLTY. Onze fysiotherapeuten selecteerden alleen wat écht werkt — helder, eerlijk en zonder marketingclaims.`}
+        description={seoDescription}
         path={`/merken/${brand.handle}`}
       />
       <JsonLd data={[breadcrumbSchema, itemListSchema]} />
@@ -138,7 +154,41 @@ export default function Brand() {
         >
           {brand.name}
         </h1>
-        <p className="mt-3 text-sm text-[var(--color-muted)]">
+
+        {content?.tagline && (
+          <p className="mt-2 text-base font-medium text-[var(--color-primary-dark)]">
+            {content.tagline}
+          </p>
+        )}
+
+        {content?.story && (
+          <p className="mt-4 max-w-2xl text-[var(--color-muted)] leading-relaxed">
+            {content.story}
+          </p>
+        )}
+
+        {content?.whyHlty && (
+          <p className="mt-3 max-w-2xl text-sm text-[var(--color-muted)] leading-relaxed">
+            <span className="font-semibold text-[var(--color-navy)]">Waarom bij HLTY: </span>
+            {content.whyHlty}
+          </p>
+        )}
+
+        {content?.pillars && content.pillars.length > 0 && (
+          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2">
+            {content.pillars.map((pillar) => (
+              <span
+                key={pillar.label}
+                className="inline-flex items-center gap-1.5 text-sm text-[var(--color-navy)]"
+              >
+                <pillar.icon className="w-4 h-4 text-[var(--color-primary)]" />
+                {pillar.label}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <p className="mt-6 text-sm text-[var(--color-muted)]">
           {products.length} product{products.length !== 1 ? 'en' : ''}
         </p>
       </motion.div>
@@ -166,6 +216,8 @@ export default function Brand() {
           ))}
         </div>
       )}
+
+      <RelatedCategories />
     </div>
     </>
   );

@@ -13,7 +13,7 @@ export interface Policy {
 }
 
 const PRIVACY = `
-<p><em>Laatst bijgewerkt: 14 mei 2026</em></p>
+<p><em>Laatst bijgewerkt: 26 mei 2026</em></p>
 
 <h2>1. Wie zijn we</h2>
 <p>HLTY (VOF, KvK 98276441) is gevestigd aan Skrokdam 5, 8918 LB Leeuwarden. Wij verkopen voedingssupplementen en fysiotherapie-producten via hlty.shop. Voor vragen over deze verklaring: <a href="mailto:info@hlty.shop">info@hlty.shop</a>.</p>
@@ -39,6 +39,8 @@ const PRIVACY = `
   <li><strong>Mollie / PayPal / Shopify Payments</strong> (betalingen)</li>
   <li><strong>Vervoerders</strong> (PostNL of vergelijkbaar — voor bezorging)</li>
   <li><strong>Google Workspace</strong> (e-mail)</li>
+  <li><strong>Google Analytics 4</strong> (websitestatistieken — alleen met jouw toestemming)</li>
+  <li><strong>Meta Platforms</strong> (advertentiemeting via de Meta Pixel — alleen met jouw toestemming)</li>
   <li><strong>Vercel</strong> (hosting van de website)</li>
 </ul>
 <p>Met elk van deze partijen hebben wij verwerkersovereenkomsten. Wij verkopen jouw gegevens <strong>niet</strong> aan derden.</p>
@@ -50,8 +52,14 @@ const PRIVACY = `
   <li>E-mailcontact: maximaal 2 jaar</li>
 </ul>
 
-<h2>6. Cookies</h2>
-<p>Wij gebruiken functionele cookies (winkelwagen, login) en beperkte analytische cookies om de site te verbeteren. Geen tracking voor advertenties.</p>
+<h2>6. Cookies en tracking</h2>
+<p>Wij plaatsen cookies in drie categorieën. Je kiest zelf welke je toestaat via de cookiebanner; je keuze pas je altijd aan via <strong>Cookie-instellingen</strong> onderaan elke pagina.</p>
+<ul>
+  <li><strong>Functioneel (altijd aan)</strong>: noodzakelijk voor winkelwagen, inloggen en beveiliging. Hiervoor is geen toestemming nodig.</li>
+  <li><strong>Analytisch</strong>: met jouw toestemming meten wij via Google Analytics 4 hoe de site wordt gebruikt, zodat we hem kunnen verbeteren.</li>
+  <li><strong>Marketing</strong>: met jouw toestemming gebruiken wij de Meta Pixel om te meten welke advertenties tot een bezoek of aankoop leiden en om advertenties relevanter te maken.</li>
+</ul>
+<p>Analytische en marketingcookies worden pas geladen nádat je daarvoor toestemming hebt gegeven. Geef je geen toestemming, dan blijft alleen het functionele deel actief. Je kunt je toestemming op elk moment intrekken via Cookie-instellingen.</p>
 
 <h2>7. Jouw rechten</h2>
 <p>Je hebt het recht op inzage, correctie, verwijdering, beperking, overdraagbaarheid en bezwaar tegen verwerking van jouw gegevens. Stuur een mail naar <a href="mailto:info@hlty.shop">info@hlty.shop</a> om gebruik te maken van een van deze rechten. Wij reageren binnen 30 dagen.</p>

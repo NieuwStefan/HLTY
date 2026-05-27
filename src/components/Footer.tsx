@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Mail, MapPin } from 'lucide-react';
+import { useConsent } from '../context/ConsentContext';
 
 const CATEGORY_LINKS = [
   { label: 'Vitamines', href: '/collectie/vitamines-1' },
@@ -29,6 +30,8 @@ const SERVICE_LINKS = [
 ];
 
 export default function Footer() {
+  const { openSettings } = useConsent();
+
   return (
     <footer className="mt-20">
       <div className="glass-dark rounded-t-[32px]">
@@ -101,6 +104,14 @@ export default function Footer() {
                     </Link>
                   </li>
                 ))}
+                <li>
+                  <button
+                    onClick={openSettings}
+                    className="text-sm text-white/60 hover:text-white transition-colors text-left"
+                  >
+                    Cookie-instellingen
+                  </button>
+                </li>
               </ul>
             </div>
           </div>

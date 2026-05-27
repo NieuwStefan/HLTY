@@ -4,6 +4,7 @@ import { useCart } from '../context/CartContext';
 import { useCustomer } from '../context/CustomerContext';
 import { formatPrice } from '../lib/shopify';
 import { formatProductTitle } from '../lib/product-title';
+import { trackBeginCheckout } from '../lib/analytics';
 
 // Appends customer-data query params to the Shopify checkout URL so that
 // e-mail and shipping fields are pre-filled when the buyer arrives. This
@@ -43,6 +44,24 @@ export default function CartDrawer() {
   const checkoutHref = cart?.checkoutUrl
     ? buildPrefilledCheckoutUrl(cart.checkoutUrl, customer)
     : '#';
+
+  // Analytics — begin_checkout vlak vóór de navigatie naar Shopify-checkout.
+  // (Het purchase-event valt buiten de SPA en wordt Shopify-zijdig getrackt.)
+  const handleCheckoutClick = () => {
+    if (!cart || lines.length === 0) return;
+    const amount = cart.cost?.totalAmount ?? cart.cost?.subtotalAmount;
+    trackBeginCheckout(
+      amount ? parseFloat(amount.amount) : 0,
+      lines.map((l) => ({
+        id: l.merchandise.id,
+        name: l.merchandise.product.title,
+        brand: l.merchandise.product.vendor,
+        price: parseFloat(l.merchandise.price.amount),
+        quantity: l.quantity,
+      })),
+      amount?.currencyCode,
+    );
+  };
 
   return (
     <AnimatePresence>
@@ -190,7 +209,11 @@ export default function CartDrawer() {
                 <p className="text-xs text-[var(--color-muted)]">
                   Verzendkosten worden berekend bij het afrekenen.
                 </p>
-                <a href={checkoutHref} className="btn-primary w-full py-4 text-sm gap-2">
+                <a
+                  href={checkoutHref}
+                  onClick={handleCheckoutClick}
+                  className="btn-primary w-full py-4 text-sm gap-2"
+                >
                   Afrekenen
                   <ArrowRight className="w-4 h-4" />
                 </a>

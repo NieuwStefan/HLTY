@@ -6,7 +6,6 @@
 //
 // Bedrijfsgegevens (KvK, RSIN, BTW, adres) komen uit het KvK-uittreksel
 // en zijn gelijk aan de wettelijke kennisgeving in src/lib/policy-content.ts.
-// Nog open: sameAs (Instagram/Facebook/LinkedIn) zodra die accounts bestaan.
 
 import JsonLd from './JsonLd';
 
@@ -48,8 +47,10 @@ const organization = {
       availableLanguage: ['Dutch'],
     },
   ],
-  // sameAs (social-profielen) volgt zodra Stefan Instagram/Facebook/
-  // LinkedIn heeft aangemaakt — voeg dan een sameAs-array toe.
+  sameAs: [
+    'https://www.instagram.com/hlty_nl/',
+    'https://www.facebook.com/profile.php?id=61590631431220',
+  ],
 };
 
 const website = {

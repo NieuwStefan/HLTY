@@ -2,7 +2,15 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
-import { getAllCollectionProducts, getProductCategories, sortByBrandRelevance, type Product, type Collection as CollectionType } from '../lib/shopify';
+import {
+  getAllCollectionProducts,
+  getCategoryMemberships,
+  enrichProductsWithMemberships,
+  getProductCategories,
+  sortByBrandRelevance,
+  type Product,
+  type Collection as CollectionType,
+} from '../lib/shopify';
 import { handlesForMainsAndSubs, productMatchesHandles } from '../lib/product-categories';
 import ProductCard from '../components/ProductCard';
 import FilterSidebar from '../components/FilterSidebar';
@@ -48,10 +56,13 @@ export default function Collection() {
     setInStockOnly(false);
     setSortBy('recommended');
 
-    getAllCollectionProducts(handle)
-      .then((data) => {
+    // Parallel: collectie-producten + category-memberships. Memberships maken
+    // de sub-categorie-filters bruikbaar zonder dat PRODUCT_CARD_FRAGMENT de
+    // (flaky) nested `collections`-expansie nog hoeft te doen.
+    Promise.all([getAllCollectionProducts(handle), getCategoryMemberships()])
+      .then(([data, memberships]) => {
         setCollection(data.collection);
-        setProducts(sortByBrandRelevance(data.products));
+        setProducts(sortByBrandRelevance(enrichProductsWithMemberships(data.products, memberships)));
       })
       .catch(console.error)
       .finally(() => setLoading(false));

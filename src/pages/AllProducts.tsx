@@ -2,7 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Apple, Pill, Stethoscope, X } from 'lucide-react';
-import { getAllProducts, type Product } from '../lib/shopify';
+import {
+  getAllProducts,
+  getCategoryMemberships,
+  enrichProductsWithMemberships,
+  type Product,
+} from '../lib/shopify';
 import {
   MAIN_CATEGORIES,
   getMainCategory,
@@ -28,6 +33,8 @@ export default function AllProducts() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0); // increment to trigger refetch
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   // URL-state → categorie-selectie
@@ -46,14 +53,24 @@ export default function AllProducts() {
   const [selectedDiets, setSelectedDiets] = useState<string[]>([]);
   const [inStockOnly, setInStockOnly] = useState(false);
 
-  // Laad alle producten éénmalig
+  // Laad alle producten + category-memberships parallel. Memberships komen
+  // van aparte collection-side queries (zie shopify.ts) zodat de flaky
+  // nested-collections-expansie in PRODUCT_CARD_FRAGMENT helemaal weg is.
+  // Bij volledige failure: distincte error-UI met retry-knop (NIET de generieke
+  // "Geen producten gevonden" — die is voorbehouden aan leeg filterresultaat).
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    getAllProducts()
-      .then((all) => {
+    setLoadError(false);
+    Promise.all([getAllProducts(), getCategoryMemberships()])
+      .then(([all, memberships]) => {
         if (cancelled) return;
-        setProducts(all);
+        setProducts(enrichProductsWithMemberships(all, memberships));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error('[AllProducts] catalog load failed', err);
+        setLoadError(true);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -61,7 +78,7 @@ export default function AllProducts() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadAttempt]);
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
@@ -458,6 +475,21 @@ export default function AllProducts() {
                   </div>
                 </div>
               ))}
+            </div>
+          ) : loadError && products.length === 0 ? (
+            <div className="card p-12 text-center">
+              <p className="text-lg font-semibold text-[var(--color-navy)] mb-2">
+                Producten konden niet geladen worden
+              </p>
+              <p className="text-sm text-[var(--color-muted)] mb-6">
+                Onze winkelsoftware reageert net even niet. Probeer het opnieuw.
+              </p>
+              <button
+                onClick={() => setLoadAttempt((n) => n + 1)}
+                className="btn-secondary px-6 py-2 text-sm"
+              >
+                Opnieuw proberen
+              </button>
             </div>
           ) : filteredProducts.length === 0 ? (
             <div className="card p-12 text-center">

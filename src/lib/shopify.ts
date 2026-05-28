@@ -232,13 +232,10 @@ const PRODUCT_CARD_FRAGMENT = `
         }
       }
     }
-    # first:12 covers the catalog's confirmed max of 10 collections/product
-    # (+ margin). Larger nested expansion makes Shopify's backend flake with
-    # INTERNAL_SERVER_ERROR over the full catalog; smaller would silently drop
-    # category memberships that drive the /alle-producten filters.
-    collections(first: 12) {
-      edges { node { handle title } }
-    }
+    # NB: no collections field here. Shopify's Storefront API intermittently
+    # times out (INTERNAL_SERVER_ERROR) on nested collections expansion across
+    # large product result sets. Category memberships are fetched separately
+    # via getCategoryMemberships() and merged in by enrichProductsWithMemberships().
     priceRange {
       minVariantPrice { amount currencyCode }
       maxVariantPrice { amount currencyCode }
@@ -317,9 +314,18 @@ export async function getProducts(first = 24, after?: string): Promise<ProductLi
 }
 
 /** Fetch every product in the catalog by paginating internally.
- *  Page size 100 (not the 250 max): smaller pages keep each query's nested
- *  collections expansion well within Shopify's flaky-timeout threshold, so the
- *  full /alle-producten load stays reliable. Client-side filters via category-tiles. */
+ *
+ *  Page size 100 (not 250) — smaller pages keep each query well under
+ *  Shopify's flaky-timeout threshold. NB: PRODUCT_CARD_FRAGMENT deliberately
+ *  does NOT expand `collections` per product anymore (that nested expansion
+ *  is the root cause of INTERNAL_SERVER_ERROR over the full catalog). Category
+ *  memberships are fetched separately via getCategoryMemberships().
+ *
+ *  Partial-success: if a single page exhausts its retry budget after a hard
+ *  Shopify hiccup, the products fetched so far are returned. A partial
+ *  /alle-producten render is strictly better than "Geen producten gevonden".
+ *  Only complete loads are cached, so the next visit re-attempts the tail.
+ */
 export async function getAllProducts(): Promise<Product[]> {
   const cacheKey = 'all-products';
   const cached = cacheGet<Product[]>(cacheKey);
@@ -327,14 +333,130 @@ export async function getAllProducts(): Promise<Product[]> {
 
   const all: Product[] = [];
   let after: string | undefined = undefined;
+  let complete = false;
   while (true) {
-    const res: ProductListResult = await getProducts(100, after);
-    all.push(...res.products);
-    if (!res.pageInfo.hasNextPage) break;
-    after = res.pageInfo.endCursor;
+    try {
+      const res: ProductListResult = await getProducts(100, after);
+      all.push(...res.products);
+      if (!res.pageInfo.hasNextPage) { complete = true; break; }
+      after = res.pageInfo.endCursor;
+    } catch (err) {
+      console.warn('[shopify] getAllProducts: page failed after retries, returning partial', { soFar: all.length, error: err });
+      break;
+    }
   }
-  cacheSet(cacheKey, all, TTL.PRODUCTS);
+  if (complete) cacheSet(cacheKey, all, TTL.PRODUCTS);
+  if (all.length === 0) throw new Error('Could not load any products');
   return all;
+}
+
+// ---------- Category memberships ----------
+
+import { MAIN_CATEGORIES } from './product-categories';
+import { PRIMARY_CATEGORIES } from './categories';
+
+/** Every category-collection handle that the filter UI cares about — the only
+ *  collections we need to know per-product memberships for. */
+function collectFilterCategoryHandles(): string[] {
+  const set = new Set<string>();
+  for (const main of MAIN_CATEGORIES) {
+    for (const sub of main.subs) {
+      for (const h of sub.handles) set.add(h);
+    }
+  }
+  for (const c of PRIMARY_CATEGORIES) set.add(c.handle);
+  return [...set];
+}
+
+/**
+ * Build a Map<productId, categoryHandles[]> by querying each category
+ * collection from the collection side instead of expanding `collections` per
+ * product. This is the pattern Shopify support recommends ("split into
+ * multiple queries" — see commit log for forum link) and avoids the nested-
+ * expansion timeout entirely.
+ *
+ * Each per-collection request is cheap (only product IDs, no nested fields)
+ * and they run in parallel. A single category failing doesn't kill the rest
+ * — that category just maps to an empty member set for this load.
+ */
+export async function getCategoryMemberships(): Promise<Map<string, string[]>> {
+  const cacheKey = 'category-memberships';
+  // Stored as Record (JSON-serializable for localStorage); reconstruct Map.
+  const cached = cacheGet<Record<string, string[]>>(cacheKey);
+  if (cached) return new Map(Object.entries(cached));
+
+  const handles = collectFilterCategoryHandles();
+  const perHandle = await Promise.all(handles.map(fetchCategoryProductIds));
+
+  const memberships = new Map<string, string[]>();
+  for (let i = 0; i < handles.length; i++) {
+    const handle = handles[i];
+    for (const productId of perHandle[i]) {
+      const existing = memberships.get(productId);
+      if (existing) existing.push(handle);
+      else memberships.set(productId, [handle]);
+    }
+  }
+  const record: Record<string, string[]> = {};
+  for (const [id, hs] of memberships) record[id] = hs;
+  cacheSet(cacheKey, record, TTL.PRODUCTS);
+  return memberships;
+}
+
+interface CollectionIdsResponse {
+  collection: null | {
+    products: {
+      pageInfo: { hasNextPage: boolean; endCursor: string };
+      edges: { node: { id: string } }[];
+    };
+  };
+}
+
+async function fetchCategoryProductIds(handle: string): Promise<string[]> {
+  const ids: string[] = [];
+  let after: string | null = null;
+  // Hard cap to prevent runaway pagination on misconfiguration. 20×250 = 5000
+  // products per category — well above realistic catalog growth.
+  for (let page = 0; page < 20; page++) {
+    try {
+      const data: CollectionIdsResponse = await shopifyFetch<CollectionIdsResponse>(
+        `query CollectionIds($handle: String!, $first: Int!, $after: String) {
+          collection(handle: $handle) {
+            products(first: $first, after: $after) {
+              pageInfo { hasNextPage endCursor }
+              edges { node { id } }
+            }
+          }
+        }`,
+        { handle, first: 250, after },
+      );
+      if (!data.collection) return ids; // collection doesn't exist on this store
+      for (const edge of data.collection.products.edges) ids.push(edge.node.id);
+      if (!data.collection.products.pageInfo.hasNextPage) break;
+      after = data.collection.products.pageInfo.endCursor;
+    } catch (err) {
+      console.warn(`[shopify] getCategoryMemberships: handle "${handle}" failed, using partial`, err);
+      return ids;
+    }
+  }
+  return ids;
+}
+
+/**
+ * Populate `product.collections` from a memberships map. The downstream
+ * `productMatchesHandles` filter logic only inspects `.handle`, so injecting
+ * the handles wholesale (with empty titles) is sufficient and avoids any
+ * change to existing filter call sites.
+ */
+export function enrichProductsWithMemberships(
+  products: Product[],
+  memberships: Map<string, string[]>,
+): Product[] {
+  return products.map((p) => {
+    const handles = memberships.get(p.id);
+    if (!handles || handles.length === 0) return p;
+    return { ...p, collections: handles.map((handle) => ({ handle, title: '' })) };
+  });
 }
 
 export async function getProduct(handle: string): Promise<Product> {

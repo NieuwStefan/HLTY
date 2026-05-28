@@ -106,7 +106,24 @@ export function sortByBrandRelevance(products: Product[]): Product[] {
 
 // ---------- GraphQL Client ----------
 
-async function shopifyFetch<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
+class ShopifyGraphQLError extends Error {
+  code?: string;
+  constructor(message: string, code?: string) {
+    super(message);
+    this.name = 'ShopifyGraphQLError';
+    this.code = code;
+  }
+}
+
+// Shopify's backend intermittently returns INTERNAL_SERVER_ERROR on queries
+// that expand nested connections (notably each product's collections) over a
+// large result set. It is a transient/flaky backend timeout — not a cost-limit
+// rejection — so a short retry reliably recovers. Applied to every request:
+// all our heavy reads share PRODUCT_CARD_FRAGMENT's collections expansion.
+const INTERNAL_ERROR_RETRIES = 3;
+const RETRY_BACKOFF_MS = 350;
+
+async function shopifyFetch<T>(query: string, variables?: Record<string, unknown>, attempt = 1): Promise<T> {
   const res = await fetch(
     `https://${SHOPIFY_DOMAIN}/api/${API_VERSION}/graphql.json`,
     {
@@ -121,8 +138,13 @@ async function shopifyFetch<T>(query: string, variables?: Record<string, unknown
 
   const json = await res.json();
   if (json.errors) {
+    const code: string | undefined = json.errors[0]?.extensions?.code;
+    if (code === 'INTERNAL_SERVER_ERROR' && attempt <= INTERNAL_ERROR_RETRIES) {
+      await new Promise((r) => setTimeout(r, RETRY_BACKOFF_MS * attempt));
+      return shopifyFetch<T>(query, variables, attempt + 1);
+    }
     console.error('Shopify API error:', json.errors);
-    throw new Error(json.errors[0].message);
+    throw new ShopifyGraphQLError(json.errors[0].message, code);
   }
   return json.data;
 }
@@ -210,7 +232,11 @@ const PRODUCT_CARD_FRAGMENT = `
         }
       }
     }
-    collections(first: 20) {
+    # first:12 covers the catalog's confirmed max of 10 collections/product
+    # (+ margin). Larger nested expansion makes Shopify's backend flake with
+    # INTERNAL_SERVER_ERROR over the full catalog; smaller would silently drop
+    # category memberships that drive the /alle-producten filters.
+    collections(first: 12) {
       edges { node { handle title } }
     }
     priceRange {
@@ -291,8 +317,9 @@ export async function getProducts(first = 24, after?: string): Promise<ProductLi
 }
 
 /** Fetch every product in the catalog by paginating internally.
- *  Page size 250 = Shopify Storefront API max. Designed for the
- *  /alle-producten page where we client-side filter via category-tiles. */
+ *  Page size 100 (not the 250 max): smaller pages keep each query's nested
+ *  collections expansion well within Shopify's flaky-timeout threshold, so the
+ *  full /alle-producten load stays reliable. Client-side filters via category-tiles. */
 export async function getAllProducts(): Promise<Product[]> {
   const cacheKey = 'all-products';
   const cached = cacheGet<Product[]>(cacheKey);
@@ -301,7 +328,7 @@ export async function getAllProducts(): Promise<Product[]> {
   const all: Product[] = [];
   let after: string | undefined = undefined;
   while (true) {
-    const res: ProductListResult = await getProducts(250, after);
+    const res: ProductListResult = await getProducts(100, after);
     all.push(...res.products);
     if (!res.pageInfo.hasNextPage) break;
     after = res.pageInfo.endCursor;

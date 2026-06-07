@@ -5,6 +5,7 @@ import {
   Zap, Dumbbell,
   ArrowRight, Leaf, CheckCircle, ShieldCheck, Truck,
   Award, FlaskConical, Pill, Apple, Cross, Search, ClipboardCheck, PackageCheck,
+  Sparkles, BadgeCheck, Beaker,
 } from 'lucide-react';
 import HealthConsultation from '../components/HealthConsultation';
 import ProductCard from '../components/ProductCard';
@@ -13,13 +14,11 @@ import { getFeaturedProducts, type Product } from '../lib/shopify';
 
 // ---------- Data ----------
 
-const FEATURED_COLLECTIONS = [
-  { handle: 'vitamines-1', label: 'Vitamines', icon: Pill, color: '#FF9500' },
-  { handle: 'mineralen-1', label: 'Mineralen', icon: Zap, color: '#007AFF' },
-  { handle: 'eiwitten-aminozuren-1', label: 'Eiwitten', icon: Dumbbell, color: '#FF3B30' },
-  { handle: 'kruiden-planten-1', label: 'Kruiden & Planten', icon: Leaf, color: '#34C759' },
-  { handle: 'superfoods-1', label: 'Superfoods', icon: Apple, color: '#5E5CE6' },
-  { handle: 'fysiotherapie-herstel-1', label: 'Fysiotherapie & Herstel', icon: Cross, color: '#AF52DE' },
+const GOAL_TILES = [
+  { handle: 'spieren-kracht-1', label: 'Spieren & Kracht', image: '/images/doel-spieren-kracht.png' },
+  { handle: 'afvallen-1', label: 'Afvallen', image: '/images/doel-afvallen.png' },
+  { handle: 'duurvermogen-1', label: 'Duurvermogen', image: '/images/doel-duurvermogen.png' },
+  { handle: 'energie-1', label: 'Energie', image: '/images/doel-energie.png' },
 ];
 
 const TRUST_STATS = [
@@ -199,47 +198,65 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured Collections */}
+      {/* Shop op doel + HLTY consultant — samen gewikkeld zodat de tussenruimte
+          gelijk is aan de tegel-gap (i.p.v. de grote space-y-16 ertussen) */}
+      <div className="space-y-4 sm:space-y-5">
+      {/* Shop op doel */}
       <section className="mx-auto max-w-[1400px] px-4">
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-8" style={{ fontFamily: 'Montserrat' }}>
-          Shop per categorie
+          Shop op doel
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {FEATURED_COLLECTIONS.map((col, i) => (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+          {GOAL_TILES.map((tile, i) => (
             <motion.div
-              key={col.handle}
+              key={tile.handle}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.05 }}
             >
               <Link
-                to={`/collectie/${col.handle}`}
-                className="card flex flex-col items-center gap-3 p-6 text-center group"
+                to={`/collectie/${tile.handle}`}
+                className="group relative block overflow-hidden rounded-3xl aspect-[4/5]"
               >
-                <div
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center"
-                  style={{ backgroundColor: `${col.color}15` }}
-                >
-                  <col.icon className="w-6 h-6" style={{ color: col.color }} />
+                <img
+                  src={tile.image}
+                  alt={tile.label}
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
+                  loading="lazy"
+                />
+                {/* Donker verloop voor leesbaarheid van de tekst */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+
+                <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6">
+                  <h3
+                    className="text-white text-lg sm:text-2xl font-extrabold tracking-tight leading-tight drop-shadow-sm"
+                    style={{ fontFamily: 'Montserrat, sans-serif' }}
+                  >
+                    {tile.label}
+                  </h3>
+                  <span className="mt-1.5 inline-flex items-center gap-1.5 text-white/85 text-sm font-semibold group-hover:gap-2.5 transition-all">
+                    Ontdek
+                    <ArrowRight className="w-4 h-4" />
+                  </span>
                 </div>
-                <span className="text-sm font-semibold text-[var(--color-navy)] group-hover:text-[var(--color-primary)] transition-colors">
-                  {col.label}
-                </span>
               </Link>
             </motion.div>
           ))}
         </div>
       </section>
 
-      {/* Populair op HLTY — Bestsellers */}
+      {/* Persoonlijk Productadvies — HLTY Consultation */}
+      <section id="productadvies" className="mx-auto max-w-[1400px] px-4 scroll-mt-28">
+        <HealthConsultation />
+      </section>
+      </div>
+
+      {/* Bestsellers */}
       {(loadingProducts || bestsellers.length > 0) && (
         <section className="mx-auto max-w-[1400px] px-4">
           <div className="flex items-end justify-between mb-8">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-[var(--color-primary)] mb-2">
-                Populair op HLTY
-              </p>
               <h2 className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ fontFamily: 'Montserrat' }}>
                 Onze meestgekozen producten
               </h2>
@@ -276,9 +293,85 @@ export default function Home() {
         </section>
       )}
 
-      {/* Persoonlijk Productadvies — HLTY Consultation */}
-      <section id="productadvies" className="mx-auto max-w-[1400px] px-4 scroll-mt-28">
-        <HealthConsultation />
+      {/* HLTY eigen productlijn */}
+      <section className="mx-auto max-w-[1400px] px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="glass-dark rounded-[32px] p-6 sm:p-8 md:p-12 relative overflow-hidden"
+        >
+          {/* Ambient gradient blobs — groen achter de afbeelding */}
+          <div className="absolute top-0 left-0 w-[420px] h-[420px] bg-[var(--color-primary)]/25 rounded-full blur-[110px] pointer-events-none" />
+          <div className="absolute bottom-0 right-0 w-[360px] h-[360px] bg-blue-500/10 rounded-full blur-[110px] pointer-events-none" />
+
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-8 lg:gap-12 items-center">
+            {/* Afbeelding — met groene gloed (halo) erachter voor diepte */}
+            <div className="relative flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-[360px] h-[360px] bg-[var(--color-primary)]/30 rounded-full blur-[110px]" />
+              </div>
+              <img
+                src="/images/hlty-eigen-producten.png"
+                alt="De eigen productlijn van HLTY"
+                className="relative w-full max-w-[520px] max-h-[320px] object-contain drop-shadow-[0_8px_32px_rgba(0,0,0,0.25)]"
+                loading="lazy"
+              />
+            </div>
+
+            {/* Tekst */}
+            <div className="flex flex-col justify-center text-center lg:text-left">
+              <div className="inline-flex w-fit mx-auto lg:mx-0 items-center gap-2 px-4 py-2 rounded-full bg-[var(--color-primary)]/20 text-[var(--color-primary)] text-xs font-bold uppercase tracking-widest mb-6">
+                <Sparkles className="w-3.5 h-3.5" />
+                Onze eigen productlijn
+              </div>
+
+              <h2
+                className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white leading-[1.05]"
+                style={{ fontFamily: 'Montserrat, sans-serif' }}
+              >
+                Eerlijke formules,{' '}
+                <span className="text-[var(--color-primary)]">niets te veel.</span>
+              </h2>
+
+              <p className="mt-5 text-white/70 text-base leading-relaxed max-w-xl mx-auto lg:mx-0">
+                We zijn trots op onze eigen productlijn — met liefde en zorg
+                ontwikkeld, zodat jij precies krijgt wat werkt en niets meer dan dat.
+              </p>
+
+              {/* Kernpunten */}
+              <div className="mt-7 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {[
+                  { icon: Beaker, label: 'Eerlijke, transparante formules' },
+                  { icon: BadgeCheck, label: 'Getoetst door fysiotherapeuten' },
+                  { icon: Leaf, label: 'Geen onnodige toevoegingen' },
+                ].map(({ icon: Icon, label }) => (
+                  <div
+                    key={label}
+                    className="flex items-center sm:flex-col sm:items-center gap-2.5 sm:gap-2 px-3 py-2.5 sm:py-3 rounded-xl bg-white/[0.05] border border-white/10 text-left sm:text-center"
+                  >
+                    <Icon className="w-5 h-5 text-[var(--color-primary)] shrink-0" />
+                    <span className="text-[12px] sm:text-[11px] font-medium text-white/75 leading-tight">
+                      {label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* CTA */}
+              <div className="mt-8">
+                <Link
+                  to="/merken/hlty"
+                  className="btn-primary px-7 py-3.5 text-sm gap-2 hover:scale-[1.02] active:scale-[0.98] transition-transform"
+                >
+                  Ontdek de HLTY productlijn
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </motion.div>
       </section>
 
       {/* Zo selecteren wij ons assortiment */}

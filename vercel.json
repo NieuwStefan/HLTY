@@ -1,9 +1,23 @@
 {
   "redirects": [
-    { "source": "/account/login", "destination": "/account", "permanent": true },
-    { "source": "/account/register", "destination": "/account", "permanent": true },
-    { "source": "/account/orders", "destination": "/account", "permanent": true },
-    { "source": "/pages/contact", "destination": "/contact", "permanent": true }
+    { "source": "/products/:handle", "destination": "/product/:handle", "permanent": true },
+    { "source": "/products", "destination": "/alle-producten", "permanent": true },
+    { "source": "/collections/all", "destination": "/alle-producten", "permanent": true },
+    { "source": "/collections/:collection/products/:handle", "destination": "/product/:handle", "permanent": true },
+    { "source": "/collections/:handle", "destination": "/collectie/:handle", "permanent": true },
+    { "source": "/collections", "destination": "/alle-producten", "permanent": true },
+    { "source": "/search", "destination": "/zoeken", "permanent": true },
+    { "source": "/cart/:path*", "destination": "/", "permanent": true },
+    { "source": "/account/:path+", "destination": "/account", "permanent": true },
+    { "source": "/pages/contact", "destination": "/contact", "permanent": true },
+    { "source": "/pages/gezondheidsdoelen", "destination": "/", "permanent": true },
+    { "source": "/blogs/:path*", "destination": "/", "permanent": true },
+    { "source": "/policies/privacy-policy", "destination": "/beleid/privacy", "permanent": true },
+    { "source": "/policies/refund-policy", "destination": "/beleid/retour", "permanent": true },
+    { "source": "/policies/terms-of-service", "destination": "/beleid/voorwaarden", "permanent": true },
+    { "source": "/policies/shipping-policy", "destination": "/beleid/verzending", "permanent": true },
+    { "source": "/policies/contact-information", "destination": "/beleid/contact-informatie", "permanent": true },
+    { "source": "/policies/legal-notice", "destination": "/beleid/wettelijke-kennisgeving", "permanent": true }
   ],
   "rewrites": [
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },

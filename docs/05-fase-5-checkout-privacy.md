@@ -313,6 +313,19 @@ logo naar wijst) redirect onmiddellijk naar `https://www.hlty.shop/`.
 De Shopify-checkout-pagina's onder `/checkouts/cn/...` gebruiken een
 aparte renderer (geen theme.liquid) en zijn dus niet beïnvloed.
 
+**Update 29-7-2026 — F6.1 is nu ook de advertentie-brug.** De
+Meta-productcatalogus (Shopify-koppeling, 847 goedgekeurde producten)
+publiceert productlinks op het primaire domein:
+`checkout.hlty.shop/products/<handle>?utm_...`. Dankzij F6.1 komen
+advertentieklikken op `www.hlty.shop/products/<handle>` uit, en sinds
+29-7 zet een serverside redirect-laag in `HLTY/vercel.json` (commit
+`a3104a8`) élk Shopify-URL-formaat om naar de eigen route
+(`/products/` → `/product/`, `/collections/` → `/collectie/`,
+`/search` → `/zoeken`, `/policies/` → `/beleid/`, enz.), met behoud
+van query-parameters. Volledige keten e2e getest in de browser.
+Gevolg: F6.1 is kritischer geworden — valt hij weg (thema-update),
+dan landen catalogusadvertenties weer op de Horizon-store.
+
 **Waarschuwing voor toekomst:** dit is een wijziging in de
 Horizon-thema code, niet in de repo. Een **thema-update of een
 fresh thema-installatie zal de wijziging overschrijven** — dan

@@ -5,7 +5,7 @@ import {
   Zap, Dumbbell,
   ArrowRight, Leaf, CheckCircle, ShieldCheck, Truck,
   Award, FlaskConical, Pill, Apple, Cross, Search, ClipboardCheck, PackageCheck,
-  Sparkles, BadgeCheck, Beaker,
+  BadgeCheck, Beaker,
 } from 'lucide-react';
 import HealthConsultation from '../components/HealthConsultation';
 import ProductCard from '../components/ProductCard';
@@ -15,10 +15,10 @@ import { getFeaturedProducts, type Product } from '../lib/shopify';
 // ---------- Data ----------
 
 const GOAL_TILES = [
-  { handle: 'spieren-kracht-1', label: 'Spieren & Kracht', image: '/images/doel-spieren-kracht.png' },
-  { handle: 'afvallen-1', label: 'Afvallen', image: '/images/doel-afvallen.png' },
-  { handle: 'duurvermogen-1', label: 'Duurvermogen', image: '/images/doel-duurvermogen.png' },
-  { handle: 'energie-1', label: 'Energie', image: '/images/doel-energie.png' },
+  { handle: 'spieren-kracht-1', label: 'Spieren & Kracht', image: '/images/doel-spieren-kracht.webp' },
+  { handle: 'afvallen-1', label: 'Afvallen', image: '/images/doel-afvallen.webp' },
+  { handle: 'duurvermogen-1', label: 'Duurvermogen', image: '/images/doel-duurvermogen.webp' },
+  { handle: 'energie-1', label: 'Energie', image: '/images/doel-energie.webp' },
 ];
 
 const TRUST_STATS = [
@@ -98,16 +98,6 @@ export default function Home() {
             <div className="relative z-10 grid lg:grid-cols-[1.1fr_1fr] gap-8 lg:gap-12 items-center">
               {/* Tekst links */}
               <div className="text-center lg:text-left">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--color-primary)]/20 text-[var(--color-primary)] text-xs font-bold uppercase tracking-widest mb-6"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Geselecteerd door fysiotherapeuten
-                </motion.div>
-
                 <motion.h1
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -161,8 +151,10 @@ export default function Home() {
                   <div className="w-[420px] h-[420px] bg-[var(--color-primary)]/30 rounded-full blur-[110px]" />
                 </div>
                 <img
-                  src="/images/hlty-banner.png"
+                  src="/images/hlty-banner.webp"
                   alt="HLTY — geselecteerd door fysiotherapeuten"
+                  width={1200}
+                  height={900}
                   className="relative w-full max-w-[560px] h-auto object-contain block"
                   loading="eager"
                   fetchPriority="high"
@@ -222,6 +214,8 @@ export default function Home() {
                 <img
                   src={tile.image}
                   alt={tile.label}
+                  width={945}
+                  height={1181}
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
                   loading="lazy"
                 />
@@ -313,8 +307,10 @@ export default function Home() {
                 <div className="w-[360px] h-[360px] bg-[var(--color-primary)]/30 rounded-full blur-[110px]" />
               </div>
               <img
-                src="/images/hlty-eigen-producten.png"
+                src="/images/hlty-eigen-producten.webp"
                 alt="De eigen productlijn van HLTY"
+                width={1200}
+                height={900}
                 className="relative w-full max-w-[520px] max-h-[320px] object-contain drop-shadow-[0_8px_32px_rgba(0,0,0,0.25)]"
                 loading="lazy"
               />
@@ -322,11 +318,6 @@ export default function Home() {
 
             {/* Tekst */}
             <div className="flex flex-col justify-center text-center lg:text-left">
-              <div className="inline-flex w-fit mx-auto lg:mx-0 items-center gap-2 px-4 py-2 rounded-full bg-[var(--color-primary)]/20 text-[var(--color-primary)] text-xs font-bold uppercase tracking-widest mb-6">
-                <Sparkles className="w-3.5 h-3.5" />
-                Onze eigen productlijn
-              </div>
-
               <h2
                 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white leading-[1.05]"
                 style={{ fontFamily: 'Montserrat, sans-serif' }}
@@ -377,14 +368,6 @@ export default function Home() {
       {/* Zo selecteren wij ons assortiment */}
       <section className="mx-auto max-w-[1400px] px-4">
         <div className="text-center mb-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-xs font-bold uppercase tracking-widest mb-4"
-          >
-            Onze werkwijze
-          </motion.div>
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight" style={{ fontFamily: 'Montserrat' }}>
             Zo selecteren wij ons assortiment
           </h2>

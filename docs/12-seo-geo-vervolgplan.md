@@ -2,10 +2,17 @@
 
 **Datum onderzoek:** 29 juli 2026 (Claude Fable, volledige audit: code + live site
 + Google-index + Search Console)
-**Status:** ✅ Beslispunten B1-B5 **beslist door Stefan op 2-8-2026** (§4).
-Uitvoering via aparte bouwsessies in de volgorde **A → B → SSR-migratie
-(nieuwe fase C) → D → E**; startprompts in §11. De oorspronkelijke fase C
-(bot-renderer) is vervallen ten gunste van de SSR-migratie.
+**Status:** 🚧 **In uitvoering op 2-8-2026.** Beslispunten B1-B5 zijn
+beslist door Stefan (§4). Na een onafhankelijke review is de veilige
+uitvoeringsvolgorde aangescherpt naar **A → B-pilot → SSR-migratie →
+B-uitrol → D0 → D → E**. Contentonderzoek kan parallel lopen, maar nieuwe
+claimdragende content gaat pas live na D0. De oorspronkelijke bot-renderer
+blijft vervallen ten gunste van de SSR-migratie.
+
+**Externe beslispoorten:** een Bing-site toevoegen, een Merchant
+Center-account aanmaken, publiceren naar productie, de SSR-cutover en het
+activeren van reviews vereisen elk een expliciete bevestiging op het moment
+van uitvoeren. Lokale bouw, tests en preview-controles mogen zelfstandig.
 
 ---
 
@@ -16,8 +23,10 @@ de cijfers na ruim twee maanden zijn hard: **6 klikken en 439 vertoningen in
 drie maanden, uitsluitend op merknaam-zoekopdrachten** ("hlty", "helty").
 Google heeft **21 van de 1.185 aangeboden pagina's geïndexeerd**. Op generieke
 zoektermen ("creatine kopen", "magnesium bisglycinaat") is HLTY onzichtbaar,
-en AI-assistenten (ChatGPT, Perplexity, Claude) kunnen de site **letterlijk
-niet lezen** — elke pagina is voor hen een lege huls.
+en meerdere niet-JavaScript-crawlers voor AI-search en social previews krijgen
+alleen de generieke HTML-huls. Een AI-assistent kan een pagina soms alsnog via
+een eigen browser- of zoeklaag ophalen; dat maakt de huidige basis niet
+betrouwbaar genoeg voor bronvermelding.
 
 De drie echte problemen, in volgorde van impact:
 
@@ -25,10 +34,13 @@ De drie echte problemen, in volgorde van impact:
    productpagina's met fabrikantteksten die woordelijk op tientallen andere
    webshops staan. Google indexeert geen duizendste kopie op een domein
    zonder autoriteit. Dit is het hoofdprobleem achter "21 van 1.185".
-2. **GEO is de facto dood**: AI-crawlers (GPTBot, ClaudeBot, PerplexityBot)
-   en social-share-bots renderen géén JavaScript. Zij zien op élke URL een
-   lege body met de generieke fallback-titel. De AI-allowlist uit Fase 8 is
-   daardoor een deur naar een lege kamer; alleen `llms.txt` is leesbaar.
+2. **Niet-JavaScript-crawlers missen de inhoud**: meerdere AI- en
+   social-preview-bots krijgen op de huidige SPA geen bruikbare initiële
+   HTML. Verschillende bots hebben verschillende doelen: `OAI-SearchBot`
+   is relevant voor ChatGPT Search, `GPTBot` voor training en
+   `ChatGPT-User` voor ophalen op verzoek. De allowlist is correct, maar
+   lost het ontbrekende HTML-document niet op. `llms.txt` blijft een
+   experimentele extra en is geen ranking- of indexeringssignaal voor Google.
 3. **Er is niets te vinden búiten producten**: geen gidsen, geen
    adviescontent, geen redenen voor Google of een AI om HLTY als bron te
    citeren. De FAQ (8 vragen over HLTY zelf) is een begin, maar beantwoordt
@@ -90,7 +102,7 @@ Bewaar deze cijfers; elke vervolgfase meet zich hieraan.
 - `site:checkout.hlty.shop`: **0 resultaten** — de Shopify-store lekt niet de
   index in. Maar: hij is wél crawlbaar, heeft self-canonicals en een eigen
   sitemap. De enige bescherming is het F6.1-JS-redirect-script in het theme.
-  Fragiel; zie onderhoudsritme §9.
+  Fragiel; zie onderhoudsritme §11.
 - `hlty.shop` (apex) en `www.hlty.shop` serveren beide 200 zonder onderlinge
   redirect; canonicals wijzen naar www. Werkt, maar consolidatie ontbreekt.
 
@@ -103,238 +115,463 @@ Deze besluiten zijn definitief. Een bouwsessie heropent ze niet.
 | # | Vraag | Besluit |
 |---|---|---|
 | B1 | Bot-rendering bouwen? | **Vervallen.** Aanvankelijk "ja", maar door B5 (SSR nu) overbodig geworden — de SSR-migratie maakt álle pagina's leesbaar voor AI-bots en social previews. Er wordt géén aparte bot-renderer gebouwd. |
-| B2 | Google Shopping-feed: eigen feed of Shopify-app? | **Eigen feed** (`api/merchant-feed.ts`), links direct naar `www.hlty.shop/product/<handle>`. De Shopify-app is afgewezen (publiceert checkout-domeinlinks, leunt op het fragiele F6.1-script). |
-| B3 | Content-programma: tempo en review? | **2 gidsen/week de eerste 6 weken** (kalender §8.3 af), daarna 1/week. AI schrijft per gids een PR; **Stefan keurt elke gids**, **Chris (fysiotherapeut) kijkt mee bij fysio-onderwerpen** — dat maakt "gecheckt door een fysiotherapeut" waar en is goud voor GEO. |
-| B4 | Reviews nu of later? | **Parkeren met trigger:** zodra ~50 bestellingen binnen zijn, bouwen met (a) automatische review-uitnodiging na levering en (b) sterren pas tonen vanaf 3 reviews per product (nooit "0 reviews" in beeld). Tot die tijd geen bouwwerk. |
-| B5 | SSR-migratie nu of bij bewezen groei? | **Nu inplannen**, ná fase A en B. Stefans argument: de site is nu klein en rustig — het ideale moment voor een fundamentele verbouwing; elke maand wachten maakt de migratie groter. Voorwaarden: via de vaste werkwijze (plansessie → bouwsessie → controlesessie), op een branch met preview-deploy, cutover pas na complete e2e-gate (§7). |
+| B2 | Google Shopping-feed: eigen feed of Shopify-app? | **Eigen feed** (`api/merchant-feed.ts`), links direct naar `www.hlty.shop/product/<handle>`. Eerst een afgeschermde pilot van 40; volledige uitrol pas na SSR en stabiele diagnose. De Shopify-app blijft afgewezen. |
+| B3 | Content-programma: tempo en review? | **Pilot: 3 gidsen in 6 weken**, daarna 8–12 weken evalueren. Tempo is een maximum, geen quotum. Stefan keurt elke gids; Chris reviewt alleen binnen aantoonbare fysio-deskundigheid. Supplementclaims vereisen daarnaast een benoemde claimspecialist. |
+| B4 | Reviews nu of later? | **Parkeren met trigger:** rond 50 bestellingen start discovery. Uitnodiging pas na betrouwbaar fulfillment-/delivery-event; echte positieve én negatieve reviews vanaf de eerste goedgekeurde review publiceren. De drempel van 3 geldt alleen voor een gemiddelde sterrenbadge. |
+| B5 | SSR-migratie nu of bij bewezen groei? | **Nu inplannen**, na fase A en de lokale B-pilot. Stefans argument: de site is nu klein en rustig — het ideale moment voor een fundamentele verbouwing; elke maand wachten maakt de migratie groter. Voorwaarden: via de vaste werkwijze (plansessie → bouwsessie → controlesessie), op een branch met preview-deploy, cutover pas na complete e2e-gate (§7). |
 
 ---
 
-## 5. Fase A — Technische quick wins (½ dag, kan direct)
+## 5. Fase A — Technische quick wins en betrouwbare nulmeting
 
-**Doel:** consolidatie + herindexering triggeren + meetbaarheid compleet.
+**Doel:** canonieke signalen consolideren, de echte indexeringssituatie
+vastleggen en meetbaarheid compleet maken. Een sitemap is een ontdek-hint,
+geen methode om zwakke of dubbele pagina's alsnog te laten indexeren.
 
-1. **Apex → www redirect.** In `vercel.json`, bovenaan `redirects`:
-   `{ "source": "/:path*", "has": [{ "type": "host", "value": "hlty.shop" }], "destination": "https://www.hlty.shop/:path*", "permanent": true }`
-   Alle canonicals/sitemap gebruiken al www; dit consolideert signalen.
-   Verifieer daarna dat `https://hlty.shop/product/<handle>` in één 308 op
-   www uitkomt en dat de bestaande Shopify-formaat-redirects blijven werken
-   (bijv. apex `/products/<handle>` → www `/products/<handle>` → www
-   `/product/<handle>` is twee hops — acceptabel; wie het in één hop wil,
-   zet de host-regel ónder de padregels, maar test dan beide varianten).
-2. **Sitemap opnieuw aanbieden** in Search Console (verwijderen + opnieuw
-   indienen) en **indexering aanvragen** via URL-inspectie voor: home,
-   `/veelgestelde-vragen`, `/alle-producten`, de 6 hoofdcollecties en de
-   15-20 belangrijkste producten (advertentie-toppers). Google begrenst dit
-   op ±10-12 verzoeken per dag — verdeel over meerdere dagen en noteer in
-   dit document welke zijn aangevraagd.
-3. **Bing Webmaster Tools** opzetten (importeert met één klik vanuit Search
-   Console) + sitemap indienen. Bing voedt ChatGPT-search — dit is óók GEO.
-4. **Lighthouse-baseline** meten (mobiel + desktop, productpagina + home) en
-   scores hieronder vastleggen. Openstaand punt uit Fase 8.
-5. **llms.txt actualiseren**: FAQ-URL, merkenpagina's en de 6 hoofdcollecties
-   opnemen als "belangrijke pagina's"-lijst met absolute URL's.
+1. **Apex → www redirect.** In `vercel.json` staat een hostgebonden permanente
+   redirect vóór de bestaande padredirects. Alle canonicals en de sitemap
+   gebruiken al www. Na een preview- of productiedeploy worden apex/www,
+   legacy-product-, collectie-, zoek- en beleidspaden als matrix getest;
+   onnodige redirectketens worden niet als eindstaat geaccepteerd.
+   **Status lokaal 2-8:** ✅ gebouwd; productiecontrole wacht op deploy.
+2. **Search Console-nulmeting en URL-inventaris.** De sitemap blijft staan;
+   niet verwijderen en opnieuw toevoegen zonder substantiële wijziging.
+   Na SSR of een nieuwe sitemapstructuur mag hij opnieuw worden aangeboden.
+   Inspecteer per paginatype representatieve URL's en noteer gekozen
+   canonical, laatste crawl, rendered HTML en indexeringsreden. Individuele
+   indexeringsverzoeken alleen voor nieuwe of wezenlijk gewijzigde
+   prioriteitspagina's; er wordt geen ongedocumenteerd dagquotum aangenomen.
+3. **Sitemaps diagnostisch splitsen bij SSR.** Maak dan een sitemap-index met
+   afzonderlijke sitemaps voor producten, collecties/merken, gidsen en
+   statische pagina's. Dit is niet nodig vanwege de omvang, maar maakt in
+   Search Console zichtbaar welk paginatype wordt ontdekt en geïndexeerd.
+   Gebruik alleen betrouwbare `lastmod`; verwijder `priority` en `changefreq`
+   omdat Google die negeert. Lege of niet-waardevolle collectie-URL's horen
+   niet in de sitemap.
+4. **Bing Webmaster Tools.** HLTY toevoegen aan het bestaande account,
+   sitemap aanmelden en daarna Search Performance, AI Performance, IndexNow
+   en Site Scan als meetbronnen gebruiken. **Status 2-8:** account aanwezig,
+   HLTY ontbreekt; toevoegen wacht op Stefans externe bevestiging.
+5. **Lighthouse/PageSpeed-baseline.** Vastgelegd op 2-8-2026 met Lighthouse
+   13.4.1, koude paginalaad:
 
-**Kwaliteitspoort:** `npm run build` groen; curl-bewijs van de nieuwe
-redirect; screenshot GSC "sitemap ingediend"; Lighthouse-scores genoteerd.
+   | Pagina | Device | Performance | A11y | LCP | FCP | TBT | CLS |
+   |---|---:|---:|---:|---:|---:|---:|---:|
+   | Home | Mobiel | 64 | 88 | 11,9 s | 3,2 s | 20 ms | 0 |
+   | Home | Desktop | 79 | 88 | 3,4 s | 0,7 s | 30 ms | 0,017 |
+   | Creatine-product | Mobiel | 81 | 90 | 4,0 s | 3,2 s | 10 ms | 0 |
+   | Creatine-product | Desktop | 99 | 90 | 0,9 s | 0,7 s | 0 ms | 0,007 |
+
+   De mobiele home-LCP en circa 4 MB beeldpayload zijn een expliciete
+   performancebevinding. **Status lokaal 2-8:** de zes gebruikte homepage-
+   PNG's zijn als WebP gekoppeld, met vaste beeldmaten; gezamenlijk circa
+   4,0 MB → 0,6 MB (ongeveer 85% kleiner), visueel gecontroleerd. De echte
+   LCP-winst wordt na preview/productiedeploy opnieuw gemeten.
+6. **`llms.txt` beperkt actualiseren.** FAQ, prioriteitscollecties en drie
+   merkpagina's zijn toegevoegd. Dit bestand is experimenteel en krijgt geen
+   hogere prioriteit dan crawlbare HTML, robots-toegang en gewone SEO.
+
+**Gevalideerde externe nulmeting 2-8:** sitemap Success, 1.185 aangeboden,
+laatst gelezen 5-6; Search Console kent 51 pagina's: 21 geïndexeerd, 25
+"Crawled – currently not indexed", 5 noindex. Merchant listings ziet 1
+geldig item met waarschuwingen voor ontbrekend retour- en verzendbeleid.
+Externe links: 3, alle drie algemene bedrijvengidsen. Voor Core Web Vitals is
+nog onvoldoende echte gebruikersdata.
+
+**Kwaliteitspoort:** `npm run build` groen; configuratie lokaal gevalideerd;
+na deploy curl-bewijs van de redirectmatrix; Search Console- en
+PageSpeed-cijfers hierboven vastgelegd; bestaande niet-gerelateerde
+werkmapwijzigingen niet meenemen in de commit.
+
+**Controle lokaal 2-8:** ✅ `vercel.json` parseert; ✅ productiebuild; ✅
+desktop- en mobiele preview zonder foutoverlay of consolefouten; ✅ alle zes
+WebP-beelden laden met de verwachte intrinsieke afmetingen. Openstaand: preview-
+of productiedeploy, redirectmatrix en nieuwe PageSpeed-run op de publieke URL.
 
 ---
 
-## 6. Fase B — Google Merchant Center + gratis vermeldingen (1-2 dagen)
+## 6. Fase B — Merchant Center: gecontroleerde pilot, daarna uitrol
 
-**Doel:** alle ~850 producten in Google Shopping (gratis listings) met links
-naar de eigen storefront. Snelste route naar niet-merk-zichtbaarheid die er
-bestaat voor een webshop.
+**Doel:** eerst aantonen dat brondata, feed, landingspagina en beleid op elkaar
+aansluiten. Daarna pas opschalen. Dit voorkomt dat catalogusbrede fouten of
+beleidsproblemen direct het account raken.
 
-1. **Merchant Center-account** aanmaken (merchants.google.com) voor
-   www.hlty.shop, land NL, valuta EUR. Domeinclaim verloopt automatisch via
-   de bestaande Search Console-verificatie. *(Stap voor Stefan of via diens
-   browser; documenteer de account-ID hier.)*
-2. **`api/merchant-feed.ts`** bouwen naar het patroon van `api/sitemap.ts`:
-   Storefront API → RSS 2.0 met `g:`-namespace. Per variant: `g:id`
-   (variant-ID — zelfde ID-ruimte als de Meta-catalogus), `g:title`,
-   `g:description` (fabrikanttekst, HTML gestript), `g:link`
-   (`https://www.hlty.shop/product/<handle>`), `g:image_link`,
-   `g:availability`, `g:price`, `g:brand` (vendor), `g:gtin` (veld
-   `variant.barcode` uit de Storefront API — query uitbreiden), zonder gtin:
-   `g:identifier_exists=false`, `g:condition=new`. Rewrite in `vercel.json`:
-   `/merchant-feed.xml` → `/api/merchant-feed`, cache `s-maxage=3600`.
-3. **Feed aanmelden** in Merchant Center (geplande ophaal, dagelijks) en
-   **verzendinstellingen** in de MC-UI configureren (NL, standaardtarief,
-   gratis vanaf €50 — conform `/beleid/verzending`).
-4. **Verwachting managen:** net als bij Meta (76 afwijzingen) zal Google een
-   deel van de supplementen afkeuren op beleid. Doel: >85% goedgekeurd.
-   Afwijzingen per reden documenteren in dit bestand, niet ad-hoc fixen.
+### 6.1 Actuele catalogusnulmeting (read-only, 2-8-2026)
 
-**Kwaliteitspoort:** feed valideert in MC zonder kritieke fouten; steekproef
-van 10 `g:link`-URL's geeft 200 op de eigen storefront; MC-diagnosepagina
->85% goedgekeurd binnen een week (screenshot hier archiveren).
+- 1.041 producten en 1.041 varianten; ieder product heeft nu exact één variant.
+- 913 varianten zijn op voorraad en bestelbaar.
+- 1.001 barcodes zijn aanwezig en hebben een geldige GTIN-lengte en
+  controlecijfer; 40 ontbreken, grotendeels bij HLTY-private-labelproducten.
+- Eén dubbele SKU/GTIN-combinatie, één product zonder SKU en zeven producten
+  zonder afbeelding vragen broncorrectie.
+- 746 producten voldoen nu al aan de strenge technische pilotcriteria.
+
+Een product-URL zonder variantparameter is daardoor nú bruikbaar. Zodra een
+product meerdere varianten krijgt, wordt het automatisch uitgesloten totdat
+het variant-URL-contract uit §6.3 is gebouwd en getest.
+
+### 6.2 Beslispoorten vóór bouw en registratie
+
+1. **Verzending eerst waarheidsgetrouw maken.** Home en `llms.txt` noemen
+   gratis verzending vanaf €50, terwijl het zichtbare verzendbeleid alleen
+   zegt dat kosten in de checkout worden berekend. Stefan bevestigt eerst de
+   echte Shopify-tarieven, drempel, verwerkingstijd en bezorgtermijn. Site,
+   checkout, schema.org en Merchant Center worden daarna exact gelijkgemaakt.
+2. **Pilotselectie.** Bij voorkeur gebruikt Stefan een omzet-/Meta-toplijst.
+   Zonder die lijst geldt een vaste, merkgespreide selectie van 40 handles:
+   20 conventionele supplementen/voeding, 15 fysio-/medische hulpmiddelen en
+   5 botanicals die handmatig door de claims-poort zijn gekomen.
+3. **Externe registratie.** Het huidige Google-account heeft nog geen
+   Merchant Center-toegang. Accountaanmaak, voorwaarden accepteren en de feed
+   aanmelden gebeuren alleen na expliciete bevestiging en accountkeuze.
+
+### 6.3 Technische pilotfeed — exact 40 producten
+
+- Gebruik een expliciete `PILOT_HANDLES`-allowlist; nooit toevallig de eerste
+  veertig resultaten. Sluit ontbrekende/dubbele identifiers, beelden kleiner
+  dan 500×500, niet-bestelbare items en niet-gecontroleerde claims uit.
+- Pin de Shopify Storefront API op de actuele geteste stabiele versie. De code
+  vraagt nu `2024-01` en wordt door Shopify stil naar een nieuwere versie
+  doorgestuurd; na wijziging wordt ook de geretourneerde API-versie bewaakt.
+- Eén feeditem per echte variant met stabiele ID
+  `shopify-v-<numerieke-variant-id>`. Gebruik geen volledige Shopify-GID en
+  stuur zonder echte variantgroep geen `item_group_id` mee.
+- Verplichte velden: `id`, zichtbare titel, platte beschrijving, link,
+  hoofdbeeld, beschikbaarheid, EUR-prijs, merk, geldige GTIN, `condition=new`,
+  producttype en `custom_label_0=pilot`. MPN en Google-categorie alleen uit een
+  betrouwbare bron; nooit verzinnen. `identifier_exists=false` alleen na
+  fabrikantbevestiging dat GTIN én MPN werkelijk niet bestaan.
+- Voor een toekomstig product met meerdere varianten geldt
+  `?variant=<numerieke-id>`. Die URL moet in de initiële render de juiste
+  variant, prijs, voorraad, afbeelding en concrete `Offer` tonen. Een ongeldige
+  of verlopen variant-ID krijgt 404/noindex en valt niet stil terug op variant 1.
+- Product-JSON-LD krijgt de echte SKU, meest specifieke `gtin8/12/13/14`,
+  `itemCondition=NewCondition`, variantbeeld en concrete `Offer`. Feed,
+  zichtbare pagina, Storefront API en JSON-LD moeten dezelfde waarden tonen.
+
+### 6.4 Betrouwbaarheid van endpoint en brondata
+
+- Shopify pagineren in blokken van maximaal 100 en nested variantpaginering
+  expliciet bewaken. Bij 429, 5xx of GraphQL-fouten begrensd opnieuw proberen.
+- Eén mislukte pagina maakt de hele response 503; nooit een lege of gedeeltelijke
+  feed met status 200. Foutresponses: `no-store`, `Retry-After`.
+- `/merchant-feed.xml` wordt vóór de SPA/SSR-catch-all afgehandeld, ondersteunt
+  `GET` en `HEAD` en retourneert `application/rss+xml; charset=utf-8`.
+- Succescache: `max-age=0, s-maxage=900, stale-while-revalidate=3600,
+  stale-if-error=86400`.
+- De quality gate krijgt een aparte API-typecheck: de huidige Vite-build neemt
+  `api/*.ts` niet mee.
+
+### 6.5 Diagnose, SSR-koppeling en uitrol
+
+1. Valideer lokaal/preview exact 40 unieke items, XML, veldlimieten, GTIN's,
+   afbeeldingen, productlinks en foutscenario's. Vergelijk alle 40 tegen
+   Shopify en minimaal 10 tegen zichtbare pagina plus JSON-LD.
+2. Na expliciet akkoord: registreer de pilotfeed in Merchant Center en volg
+   diagnostiek 3–7 dagen. Go/no-go = 100% bron verwerkt, nul technische
+   attribuutfouten en nul prijs-/voorraad-/landingsmismatches. Beleidsafkeuringen
+   worden per cohort gerapporteerd; een arbitrair percentage vervalt.
+3. Volledige uitrol volgt pas ná SSR, variantconsistentie en een stabiele pilot.
+   Dan worden alle technisch én beleidsmatig geschikte producten toegelaten;
+   niet blind alle 1.041.
+
+**Kwaliteitspoort:** unit-tests voor XML/UTF-8, identifiers, GTIN, prijs,
+beschikbaarheid en allowlist; integratietests voor paginering, retry en
+alles-of-niets-fouten; API-typecheck en productiebuild groen; previewfeed exact
+40; alle links en beelden bereikbaar; feed <10 MB; nul technische mismatches.
 
 ---
 
-## 7. Fase C — SSR-migratie naar React Router 7 framework mode (2-3 weken)
+## 7. Fase C — SSR-migratie naar React Router 7 framework mode
+
+**Raming:** 2–3 weken pas na de contractfase herbevestigen; staging-auth,
+Shopify-loaderherbouw of aangetroffen regressies kunnen dit verlengen.
 
 > Vervangt de oorspronkelijke fase C (bot-renderer) — besluit B5, 2-8-2026.
 
 **Doel:** de hele storefront server-side gerenderd op Vercel, zodat élke
 bezoeker — mens, Googlebot, AI-crawler, social-preview-bot — dezelfde
-volwaardige HTML krijgt. Dit dicht het GEO-gat fundamenteel, verbetert
-laadtijd/Core Web Vitals, en maakt alle toekomstige content (fase D) vanaf
-dag één bot-leesbaar.
+volwaardige HTML krijgt. Dit dicht het leesbaarheidsgat fundamenteel en maakt
+toekomstige content vanaf dag één bot-leesbaar. SSR is op zichzelf geen
+garantie op betere Core Web Vitals; databudgetten, beelden en client-JS blijven
+aparte performancepoorten.
 
-**Waarom React Router 7 framework mode:** `react-router-dom` v7 zit al in
-het project — routes en componenten zijn grotendeels herbruikbaar; het is de
-kleinste stap naar SSR (kleiner dan een Next.js-herschrijf) en draait
-first-class op Vercel.
+**Waarom React Router 7 framework mode:** `react-router-dom` v7 zit al in het
+project, routes en componenten zijn grotendeels herbruikbaar en dit is kleiner
+dan een frameworkherschrijf. Alle React Router-pakketten worden wel op exact
+dezelfde v7-patch vastgezet; een ongeversioneerde installatie kan inmiddels
+v8 binnenhalen.
 
-**Aanpak — via de vaste werkwijze, niet direct bouwen:**
+### 7.1 Contractfase — eerst beslissen en bewijzen
 
-1. **Plansessie** (ontwerp-panel, zie
-   `/Users/stefanritsema/Documents/VibeCode/_WERKINSTRUCTIE-bouwsessie-opdracht.md`):
-   levert een bindende blauwdruk + opdrachtdocument. De blauwdruk moet
-   minimaal dekken: route-mapping (alle 13 routes + catch-all), loaders per
-   route (Storefront API server-side, met cache-strategie), wat er met
-   `vercel.json` gebeurt (redirects blijven; SPA-catch-all vervalt;
-   sitemap-rewrite blijft of verhuist), behoud van `api/*`-functies
-   (sitemap, webhook, auth, merchant-feed uit fase B), SEO/JSON-LD
-   server-side (vervangt `SEO.tsx`-hoisting), consent/tracking (GA4 + Pixel
-   blijven client-side ná consent — mag NIET server-side gaan lekken),
-   cart/checkout-flow (Storefront API cart + `checkoutUrl` naar
-   checkout.hlty.shop — exact behouden), auth-callback, en de
-   omgevingsvariabelen (VITE_-prefix verdwijnt voor server-code; secrets
-   scheiden).
-2. **Bouwsessie** op een aparte branch met Vercel preview-deploy; commit
-   per stap; nooit direct naar `main`.
-3. **Controlesessie + e2e-gate vóór cutover** — de cutover mag pas als
-   ALLES hieronder op de preview-URL bewezen is:
-   - [ ] Checkout: product → cart → `checkoutUrl` → Shopify-checkout werkt
-   - [ ] Login/account + auth-callback werkt
-   - [ ] Cookiebanner + consent: geen GA4/Pixel-request vóór toestemming,
-         wél erna (Network-tab-bewijs)
-   - [ ] Alle redirects uit `vercel.json` werken (steekproef /products/,
-         /collections/, /search, /policies/, apex→www)
-   - [ ] `curl` zonder JS toont per pagina: juiste title, meta-description,
-         canonical, OG-tags, JSON-LD én zichtbare content (h1, prijs,
-         beschrijving) — op product-, collectie-, merk-, FAQ- en homepagina
-   - [ ] Rich Results Test groen op product + FAQ
-   - [ ] Lighthouse ≥ de fase-A-baseline (geen regressie)
-   - [ ] `sitemap.xml`, `robots.txt`, `llms.txt` bereikbaar en correct
-   - [ ] Meta-advertentieketen: checkout.hlty.shop/products/… → 
-         www.hlty.shop/product/… blijft werken (F6.1 + redirects)
-4. **Cutover** = merge naar `main` + productie-deploy; **rollback** =
-   Vercel instant rollback naar de vorige deploy (vooraf verifiëren dat die
-   knop er staat). De Meta-advertenties kunnen tijdens de cutover kort
-   gepauzeerd worden als extra voorzichtigheid.
+De plansessie (ontwerp-panel volgens de gedeelde werkinstructie) levert een
+bindende file-by-file blauwdruk en testmatrix. Die legt vóór implementatie vast:
 
-**Kwaliteitspoort:** de volledige e2e-gate hierboven, afgevinkt met bewijs
-in het controlesessie-verslag; daarna de curl-bewijzen (GPTBot-UA én
-browser-UA identiek qua content) hier in het document archiveren.
+- **Runtime/build:** één Node LTS-versie voor lokaal, CI en Vercel; volledige
+  typecheck inclusief `api/*.ts`; client- en serverbuild; route-typegeneratie.
+- **Route- en statusmatrix:** de huidige app heeft twaalf routes plus catch-all,
+  geen dertien. Beslis expliciet of `/merken` als crawlbaar overzicht wordt
+  toegevoegd. Ontbrekende entiteit = 404; Shopify-timeout/storing = 502/503
+  met noindex; verwijderde producten krijgen bewust 404, 410 of gerichte
+  redirect. Een storing mag nooit als ‘niet gevonden’ worden vermomd.
+- **Loaderbudgetten:** home maximaal zes featured producten; product alleen het
+  hoofdproduct kritisch en aanbevelingen uitgesteld; collectie, merk en alle
+  producten alleen de eerste URL-gestuurde pagina SSR. Geen catalogusscan voor
+  navigatie, geen volledige membership-map of catalogus in hydration-data.
+  Shopify-fetch krijgt timeout, `res.ok`-controle, malformed-JSON-afhandeling,
+  typed errors en begrensde retry.
+- **Cache/privacy:** publieke cache per route; auth-, customer-, account-,
+  welkom- en callbackroutes expliciet `private, no-store`. Geen klantnaam,
+  cart-ID, checkout-URL of persoonsgegevens in CDN-cache, gedeelde HTML of logs.
+- **Omgevingsvariabelen:** matrix met publiek versus server-only. GA4- en
+  Meta-ID's mogen publiek; OpenAI-, webhook-, CAPI- en andere secrets nooit.
+  De `VITE_`-prefix verdwijnt niet automatisch zolang browsercode Shopify
+  rechtstreeks benadert. Voeg startup-validatie en `.env.example` toe en
+  controleer de clientbundle op secrets.
+- **Merchantvariantcontract:** §6.3 is leidend voor URL, geselecteerde variant,
+  prijs, voorraad, beeld en `Offer` in de eerste HTML.
+- **Vercelcontract:** alleen de SPA-fallback vervalt. Redirects, statische
+  bestanden, sitemap/feed en `/api/*` blijven vóór SSR afgevangen. De Shopify-
+  webhook blijft een losse functie of behoudt aantoonbaar de onbewerkte body
+  voor HMAC-verificatie.
 
----
+### 7.2 Bekende releaseblokkers uit de code-audit
 
-## 8. Fase D — De content-motor: gidsen met de fysio-invalshoek (doorlopend)
+1. De huidige Framer Motion-wrappers renderen server-side `opacity: 0` en maken
+   daardoor belangrijke tekst zonder JavaScript onzichtbaar. Maak kritieke
+   content SSR-veilig (`initial={false}` of centrale strategie) en test ook
+   `prefers-reduced-motion`.
+2. `ProductDescription` retourneert server-side bewust geen geparseerde tekst.
+   Vervang browser-only `DOMParser` door een deterministische server- én
+   browsergeschikte transformatie; de volledige beschrijving moet in HTML staan.
+3. De bestaande catalogusfuncties kunnen alles ophalen, breed uitwaaieren en
+   bij fouten gedeeltelijke resultaten teruggeven. Splits serverreads,
+   browsercart/predictive search en gedeelde types; gebruik de loaderbudgetten.
+4. Preview-login kan niet betrouwbaar werken met productiecallback-URL's.
+   Voor de acceptatietest is een stabiel staging-subdomein nodig dat in Shopify
+   als callback/logout-URL is toegestaan, plus deployment-afhankelijke origin.
+   Dit is een externe beslispoort voor Stefan; zonder staging kan auth pas als
+   gecontroleerde productiecanary worden getest, wat de gate verzwakt.
+5. `SEO.tsx` hoeft niet automatisch te verdwijnen: React 19 kan title/meta/link
+   tijdens SSR hoisten. Behoud of vereenvoudig wat bewezen werkt. Verplaats de
+   vaste verificatie-, favicon- en fonttags uit `index.html` naar de root-layout
+   en voorkom dubbele metadata/JSON-LD na hydration en navigatie.
 
-**Doel:** de enige duurzame route naar niet-merk-verkeer én AI-citaties.
-HLTY's verhaal ("geselecteerd door fysiotherapeuten, duidelijkheid in
-zelfzorg") is precies het soort bron dat AI-assistenten citeren — als er
-iets te lezen valt.
+### 7.3 Implementatievolgorde
 
-1. **Architectuur** (eenmalig, 1 dag): route `/gids` (overzicht) +
-   `/gids/:slug` in de SPA. Content als TypeScript/markdown-bestanden in
-   `src/content/gidsen/` (patroon: `src/data/brands.ts` — geen CMS, dus een
-   AI-sessie kan een gids als gewone PR aanleveren en Stefan reviewt in de
-   preview). Per gids: SEO-component, `Article`-JSON-LD (+ `FAQPage` voor de
-   vraagsectie), breadcrumb, blok "bijpassende producten" (interne links
-   naar 3-6 producten), publicatie-/wijzigingsdatum. Sitemap uitbreiden
-   (`api/sitemap.ts`) en `/gids` opnemen in llms.txt en de footer.
-   **Timing:** de architectuurstap start ná de SSR-cutover (fase C), zodat
-   gidsen vanaf dag één server-gerenderd zijn. De cópy van gids 1 en 2 mag
-   al tijdens de SSR-bouw als concept geschreven worden (§8.3-4 zijn
-   framework-onafhankelijk); publicatie volgt na de cutover.
-2. **Redactiestatuut (hard, juridisch):** supplementen vallen onder
-   EU-claimsverordening/KOAG-KAG. Alleen toegestane gezondheidsclaims
-   ("magnesium draagt bij tot de vermindering van vermoeidheid") — nooit
-   medische claims (genezen/voorkomen/behandelen van ziekte). Elke gids
-   sluit af met de disclaimer die al op de FAQ staat + bronnenlijst
-   (EFSA-register, PubMed). Twijfelclaim = schrappen. De uitvoerende AI
-   controleert elke gids expliciet tegen deze regel vóór oplevering.
-3. **Kalender — eerste 12 gidsen** (volgorde = prioriteit, gekozen op
-   zoekvolume-kans × fysio-onderscheid × productkoppeling):
-   1. Magnesiumvormen vergeleken: citraat, bisglycinaat, tauraat — welke
-      past bij welk doel?
-   2. Creatine-startgids: dosering, timing, mythes (koppelt aan het
-      advertentie-topproduct)
-   3. Omega-3-kwaliteit beoordelen: EPA/DHA, TOTOX, IFOS-certificering
-   4. Vitamine D in de Nederlandse winter: wie, hoeveel, waarom
-   5. Eiwitbehoefte bij krachttraining: berekening + voedingsbronnen
-   6. Herstel na een hardloopblessure: wat een fysio adviseert (+ rol van
-      voeding/supplementen)
-   7. Slaap verbeteren zonder medicatie: onderbouwde opties op een rij
-   8. Collageen: wat zegt het onderzoek écht?
-   9. IJzer en vermoeidheid: wanneer suppleren en wanneer naar de huisarts
-   10. Elektrolyten bij zweten: wie heeft ze echt nodig?
-   11. Zink en weerstand: doseringen en vormen
-   12. **Supplementen die je níet nodig hebt** — het "duidelijkheid in
-       zelfzorg"-statement; onderscheidend en zeer citeerbaar
-4. **Formaat per gids:** 1.200-1.800 woorden; de kernvraag in de eerste
-   alinea beantwoord (AI-citaties pakken de eerste heldere definitie);
-   H2-structuur; een vergelijkingstabel waar zinvol; 3-5 vragen als
-   FAQ-sectie; interne links naar producten én naar verwante gidsen.
-5. **Productbeschrijvingen verrijken (parallel spoor):** voor de top-50
-   producten (advertentie- en omzet-toppers) een uniek "Waarom HLTY dit
-   selecteerde"-blok (3-5 zinnen: voor wie, waarom deze formule, hoe te
-   gebruiken) bóven de fabrikanttekst. Opslag: `src/content/product-notes.ts`
-   keyed op handle (zelfde patroon als brands.ts). Dit is de directe aanval
-   op het duplicate-content-probleem van §1.
+1. Frameworkskelet zonder cutover: versies uitlijnen, root/routes/entries,
+   configs en scripts; vaste head-tags migreren.
+2. Statische routes: FAQ, contact, beleid en echte 404; providers en motion
+   SSR-veilig maken.
+3. Shopify-laag begrenzen en daarna publieke routes één voor één: Home →
+   Product → Collection → Brand → Alle producten. Iedere route passeert eerst
+   status-, cache-, no-JS- en hydration-tests.
+4. Private browserflows: cart/checkout, consent/tracking en auth/account/welkom;
+   bestaande API-functies aanvankelijk behouden.
+5. Vercel-preview op een aparte branch; SPA-fallback verwijderen en API,
+   webhook, feeds en redirects bewijzen. Daarna staging-auth.
+6. Gecontroleerde cutover na expliciet akkoord; productie-smoke en vooraf
+   geteste rollback. Geen externe Shopify-configuratie of deploy zonder akkoord.
 
-**Kwaliteitspoort per gids-PR:** build groen; claim-check aantoonbaar
-uitgevoerd (sectie in de PR-beschrijving); preview-URL bekeken; JSON-LD
-valide (Rich Results Test na livegang van de eerste gids).
+### 7.4 Bindende e2e-gate vóór cutover
 
----
+- [ ] Build: route-types, volledige typecheck inclusief API, unit-tests en
+      productiebuild op de vastgelegde Node-versie.
+- [ ] Iedere route/catch-all: juiste status, H1 en inhoud, title, description,
+      canonical, robots, OG, verification-tags en passende JSON-LD in SSR-HTML.
+- [ ] Product: naam, juiste variant, prijs, voorraad en volledige beschrijving
+      staan in de ontvangen HTML; `Article`/FAQ wordt niet op product toegepast.
+- [ ] No-JS desktop/mobiel leesbaar; geen `opacity:0`; reduced-motion werkt.
+- [ ] Geen hydration-warnings, dubbele head/schema of tweede Shopify-call voor
+      reeds server-geladen data; back/forward en scrollherstel werken.
+- [ ] Shopify-timeout, 429, 5xx en malformed JSON leveren begrensde retry en
+      502/503-noindex; echte 404's blijven 404.
+- [ ] Publieke/private cacheheaders kloppen en geen persoonsgegevens lekken.
+- [ ] Cart add/update/remove, refresh-herstel, accountwissel, logout en checkout
+      op `checkout.hlty.shop` werken.
+- [ ] Auth: PKCE/state, nieuw/bestaand account, refresh, expiry en logout werken
+      op het stabiele stagingdomein.
+- [ ] Geen GA4/Meta vóór consent; exact één eerste pageview erna en één per
+      navigatie; reject en revoke werken.
+- [ ] Webhook: ongeldige HMAC 401, geldige raw-bodyfixture 200; `/api/*` wordt
+      nooit door SSR opgeslokt.
+- [ ] Volledige redirectmatrix, sitemap, robots, llms en Merchant-feed werken;
+      tien feedlinks zijn variantconsistent.
+- [ ] Browser-, Googlebot-, OAI/ChatGPT- en social-preview-UA krijgen dezelfde
+      inhoud; geen UA-afhankelijke rendering.
+- [ ] Koude en warme TTFB/LCP/CLS, JS- en hydration-payload blijven binnen de
+      vooraf vastgelegde budgetten en minstens zonder regressie t.o.v. fase A.
+- [ ] Meta-advertentieketen, preview-smoke, productie-smoke en rollbackscenario
+      zijn aantoonbaar getest.
 
-## 9. Fase E — Reviews & autoriteit (na A-D, apart te plannen)
-
-- **Reviews — trigger beslist (B4): starten zodra ~50 bestellingen binnen
-  zijn.** Dan: systeemkeuze (Judge.me met headless API vs eigen bouw op
-  Supabase), automatische review-uitnodiging na levering (aanhaken op de
-  bestaande `orders/paid`-webhook, `api/shopify-order-webhook.ts`), sterren
-  pas tonen vanaf 3 reviews per product (nooit "0 reviews" in beeld), en
-  `aggregateRating` in het Product-schema (het enige ontbrekende
-  rich-result-veld, zie Fase 8 §3).
-- **Autoriteit (doorlopend, deels handwerk Stefan):** bedrijfsvermeldingen
-  (KvK-gerelateerde registers, supplementen-vergelijkers), een link vanaf
-  fysiotherapiebilgaard.nl (relevant en legitiem: de fysio-curatie is het
-  verhaal), gastartikelen/PR rond "fysiotherapeuten cureren een
-  supplementenshop", socials volledig invullen (sameAs staat al klaar).
-- **AI-citatie-meting:** maandelijks dezelfde 5 prompts stellen aan
-  ChatGPT, Perplexity en Claude ("beste magnesiumvorm bij spierkrampen",
-  "creatine dosering beginner", "betrouwbare supplementenshop Nederland",
-  "omega 3 kwaliteit herkennen", "supplementen bij hardloopblessure") en
-  noteren of HLTY genoemd/gelinkt wordt. Nulmeting: nog nergens genoemd
-  (verwacht — er valt niets te lezen).
+**Kwaliteitspoort:** alle vakken met bewijs afgevinkt in het controlesessie-
+verslag; SSR-cutover en productie-deploy pas na expliciete bevestiging.
 
 ---
 
-## 10. Onderhoudsritme + herevaluatie SSR
+## 8. Fase D0 — Claims-governance vóór nieuwe content
 
-**Maandelijks (10 min, elke eerste werkdag):** GSC-cijfers (klikken/
-vertoningen/geïndexeerd) in de tabel hieronder bijschrijven;
-`site:checkout.hlty.shop` checken (moet 0 blijven); Merchant
-Center-diagnose; na élke Shopify-theme-update het F6.1-script controleren
-(zie docs/05 §9 — het sneuvelt bij theme-updates en de advertentie-keten
-hangt eraan).
+**Doel:** zorgen dat vindbaarheid niet wordt gekocht met juridisch of medisch
+risico. Een disclaimer, PubMed-bron of AI-check maakt een niet-toegestane
+commerciële gezondheidsclaim niet geldig.
+
+1. **Beperkte bestaande-contentaudit:** minimaal home, FAQ, productadviseur,
+   collectiecopy, productnotities, metadata, alt-teksten en commerciële
+   afbeeldingen. Ook een achtergrondgids met productlinks of -beelden geldt als
+   commerciële communicatie.
+2. **Claimsregister:** per publieke formulering pagina/sectie, claimtype,
+   nutriënt/stof, EU-registerverwijzing, toegestane betekenis, gebruiksvoorwaarden,
+   doelgroep, hoeveelheid per aanbevolen dagdosering van ieder gelinkt product,
+   waarschuwingen, bron/versie/controledatum, reviewer, status, publicatie- en
+   hercontroledatum en correctiehistorie.
+3. **Rollen:** AI mag onderzoek structureren en een concept maken, maar geen
+   claim goedkeuren. Stefan is publicatie-eigenaar. Chris beoordeelt alleen
+   onderwerpen binnen zijn aantoonbare fysiotherapeutische deskundigheid.
+   Supplementclaims gaan aanvullend langs een benoemde claimspecialist;
+   interacties, tekorten, diagnostiek en individuele doseeradviezen langs een
+   passende diëtist, apotheker of arts. Twijfel of open status blokkeert livegang.
+4. **Transparantie:** iedere gids toont werkelijke auteur, relevante
+   kwalificaties, reviewer, publicatie-/wijzigingsdatum, bronnen, commercieel
+   belang van HLTY en een korte AI-toelichting wanneer AI substantieel hielp.
+   De naam van een gezondheidsprofessional wordt niet als productaanbeveling
+   of keurmerk gebruikt.
+
+**Input nodig vóór publicatie:** naam/rol van de formele claimsreviewer;
+bevestiging of Chris met gecontroleerde bio en beroepsgegevens zichtbaar mag;
+budget/keuze voor externe controle van het statuut en de eerste drie gidsen;
+de tien prioriteitsproducten met complete actuele etiketten.
+
+## 9. Fase D — Contentarchitectuur en gecontroleerde pilot
+
+**Doel:** duurzame niet-merk-vindbaarheid opbouwen met eigen, controleerbare
+waarde. AI-citaties zijn een mogelijke uitkomst, geen gegarandeerd kanaal.
+
+### 9.1 Architectuur na SSR
+
+- Routes `/gids` en `/gids/:slug`; content als versiebeheerbare Markdown/MDX of
+  typed content in de nieuwe SSR-structuur. Geen CMS in de eerste pilot.
+- Per gids: zichtbare auteur/reviewer en kwalificaties, bronnen bij de relevante
+  bewering, publicatie-/wijzigingsdatum, `Article` en `Breadcrumb`-schema,
+  interne links en een beperkt blok met gecontroleerde producten.
+- FAQ-vragen mogen zichtbaar helpen, maar een `FAQPage`-rich result is geen
+  acceptatiecriterium voor een commerciële webshop.
+- Sitemaptype ‘gidsen’, `/gids` in navigatie/footer en `llms.txt`, analytics-
+  events voor gids → product, add-to-cart, aankoop en geassisteerde omzet.
+
+### 9.2 Eerste batch: drie gidsen in zes weken
+
+1. **Een supplementenetiket lezen: 7 controles vóór aankoop.** Laag
+   claimrisico en een goede proef voor architectuur en redactiestatuut.
+2. **Creatine-startgids.** Alleen exacte toegestane betekenis en voorwaarden;
+   de prestatieclaim vereist onder meer 3 gram per dag en de toepasselijke
+   volwassen doelgroep met hoogintensieve inspanning.
+3. **Omega-3-etiketgids:** EPA, DHA, dagdosering en keurmerken; wettelijk
+   toegestane claims, controleerbare eigenschappen en private keurmerken
+   duidelijk uit elkaar houden.
+
+Daarna 8–12 weken meten en pas dan bepalen of magnesium, eiwit, vitamine D,
+elektrolyten en zink volgen. Blessureherstel, slaap, collageen, ijzer/
+vermoeidheid en individueel klinkende ‘niet nodig’-adviezen blijven uit de
+eerste reeks. Twee gidsen per week is hooguit een toekomstig maximum, nooit
+een productiequotum; kwaliteit en eigen bijdrage bepalen het tempo.
+
+Er geldt geen vast woordenaantal. Iedere gids beantwoordt de hoofdvraag vroeg,
+is scanbaar en bevat minimaal één aantoonbaar origineel onderdeel, zoals een
+etiketanalyse, beslisboom, praktijkobservatie of rekenvoorbeeld. Lengte volgt
+uit wat nodig is om de vraag volledig en veilig te beantwoorden.
+
+### 9.3 Productnotitiespilot
+
+Start met tien, niet vijftig, producten met complete etiketten en commerciële
+prioriteit. Leg alleen controleerbare gegevens vast: samenstelling en hoeveelheid
+per dagdosering, ingrediëntvormen, allergenen, certificeringen, verpakkingsduur,
+feitelijke reden voor assortimentsopname en gebruik conform etiket. ‘Voor wie’
+en voordelen verschijnen alleen wanneer het claimregister ze voor dat concrete
+product en die dosering goedkeurt.
+
+**Kwaliteitspoort per publicatie:** productiebuild groen; SSR-response bevat
+juiste status, canonical, title, description, volledige inhoud, auteur en
+bronnen; `Article` en `Breadcrumb` valideren; claimregister zonder open punten;
+ieder gelinkt product op actuele samenstelling/dosering gecontroleerd; copy,
+metadata, tabellen, CTA's, beelden en alt-teksten meegecontroleerd; originele
+bijdrage en AI-inzet vastgelegd; desktop/mobiel/linktracking bewezen; expliciete
+goedkeuring van Stefan én de aangewezen claimsreviewer.
+
+---
+
+## 10. Fase E — Reviews en relevante autoriteit
+
+### 10.1 Reviews — discovery rond 50 bestellingen
+
+- Het bestelvolume start de discovery, niet automatisch de livegang. Vereist
+  zijn een betrouwbaar fulfillment-/delivery-event, geverifieerde aankoop,
+  moderatieproces, privacygrondslag en voldoende concentratie per product.
+  `orders/paid` mag een toekomstige uitnodiging klaarzetten, maar bewijst geen
+  levering; versturen pas na fulfillment of aantoonbare delivery.
+- Publiceer echte positieve én negatieve reviews vanaf de eerste goedgekeurde
+  review. Drie reviews is alleen de minimumdrempel voor een gemiddelde
+  sterrenbadge, niet een reden om bestaande reviews te verbergen.
+- Weiger alleen volgens vooraf zichtbare regels, bijvoorbeeld persoonsgegevens,
+  spam, belediging of verboden voedings-/medische claims—nooit wegens een lage
+  score. Bewaar reden en audittrail; wijzig reviewtekst niet stilzwijgend.
+- Toon bron, methode voor ‘geverifieerde aankoop’, publicatiebeleid,
+  scoreberekening en eventuele beloning. `aggregateRating` alleen voor het
+  exacte product, gebaseerd op zichtbaar gepubliceerde reviews en hetzelfde
+  zichtbare gemiddelde; externe sites niet samenvoegen.
+- Bij een leverancier vooraf datastromen, verwerkersafspraken, subverwerkers,
+  bewaartermijnen, export en verwijdering beoordelen. Laat ook bepalen of de
+  uitnodiging servicebericht of direct marketing is en borg afmelding.
+
+### 10.2 Autoriteit — kwaliteit boven aantallen
+
+- Alleen vermeldingen die bezoekers echt helpen en bedrijfsgegevens correct
+  tonen; geen bulkinschrijving in lagekwaliteitdirectories.
+- Een link vanaf fysiotherapiebilgaard.nl is contextueel, niet sitebreed, met
+  transparantie over de relatie en alleen waar hij inhoudelijk helpt.
+- Geen betaling, gratis product of wederdienst voor een gewone dofollow-link.
+  Betaalde/gesponsorde links krijgen `rel="sponsored"` of `nofollow`.
+- Meet relevante verdiende verwijzende domeinen en referralverkeer, niet het
+  kale aantal links.
+
+### 10.3 AI-/antwoordmachinemeting is directioneel
+
+Gebruik vaste prompts alleen als observatie, niet als KPI of bewijs van
+autoriteit. Leg datum, exacte prompt, taal/land, model, zoekfunctie, accounttype,
+nieuw gesprek, geheugenstatus, genoemde URL en concurrenten vast; herhaal per
+kwartaal drie keer om toeval zichtbaar te maken. Gewone crawlbaarheid,
+people-first content en bronkwaliteit blijven leidend; speciale ‘AI-markup’ is
+geen vereiste.
+
+---
+
+## 11. Onderhoudsritme en meetkader
+
+**Maandelijks, iedere eerste werkdag:**
+
+- **Techniek:** aangeboden/geïndexeerd per sitemaptype, crawlstatus, canonical,
+  Core Web Vitals en beschikbaarheid van sitemap/feed.
+- **Search:** klikken, vertoningen, CTR en positie, uitgesplitst naar branded/
+  non-branded, paginatype en querycluster.
+- **Content/omzet:** gids → productklik, add-to-cart, aankoop, geassisteerde
+  omzet en correcties of claimincidenten.
+- **Merchant:** bronverwerking, technische mismatches, afkeuringen per cohort en
+  actuele prijs/voorraad. Accountwaarschuwing = stop en analyseren.
+- **Autoriteit:** relevante verdiende verwijzende domeinen en referralverkeer.
+- **Generatieve zoekervaringen:** apart Search Console-rapport wanneer de
+  property toegang krijgt; AI-promptruns alleen volgens §10.3.
+- **Continuïteit:** `site:checkout.hlty.shop` blijft 0; na iedere Shopify-
+  theme-update het F6.1-script controleren (docs/05 §9).
 
 | Maand | Klikken | Vertoningen | Geïndexeerd | Opmerkingen |
 |---|---|---|---|---|
 | Nulmeting 29-7-2026 | 6 (3 mnd) | 439 (3 mnd) | 21 / 1.185 | Alleen merknaam-query's |
 
-**Reviews-trigger (B4):** noteer maandelijks ook het totaal aantal
-bestellingen; bij ~50 start fase E-reviews (zie §9).
+**Reviews-trigger (B4):** noteer maandelijks het totaal aantal bestellingen;
+rond 50 start discovery voor §10.1, niet automatisch de review-livegang.
 
 ---
 
-## 11. Startprompts per fase (voor een verse AI-sessie)
+## 12. Startprompts per fase (voor een verse AI-sessie)
 
 Elke fase is zelfstandig uitvoerbaar. Werkmap:
 `/Users/stefanritsema/Documents/VibeCode/HLTY` (git-repo, `main` =
@@ -346,31 +583,48 @@ curl verifiëren; alleen de bestanden van je eigen fase committen.
 > `/Users/stefanritsema/Documents/VibeCode/HLTY/docs/12-seo-geo-vervolgplan.md`
 > (dit document). Voer Fase A (§5) uit. GSC-stappen die een browser vereisen:
 > gebruik de verbonden Chrome van Stefan (property www.hlty.shop is
-> geverifieerd). Werk §5 en de meettabel in §10 bij en commit het document mee.
+> geverifieerd). Werk §5 en de meettabel in §11 bij. Neem bestaande,
+> niet-gerelateerde wijzigingen niet mee.
 
-> **Fase B:** Lees eerst dit document volledig. Voer Fase B (§6) uit; bouw
-> `api/merchant-feed.ts` naar het patroon van `api/sitemap.ts` (zelfde
-> env-vars). Stap 1 (accountaanmaak) samen met Stefan. Werk §6 bij met
+> **Fase B-pilot:** Lees dit document en voer §6 in volgorde uit. Stop vóór
+> build bij ontbrekende verzendgegevens. Bouw de allowlistfeed en tests; meld
+> niets extern aan zonder expliciet akkoord. Werk §6 bij met selectiebron,
 > account-ID, feedstatus en afkeuringsredenen.
 
 > **Fase C (SSR) — start met de PLANSESSIE, niet met bouwen:** Lees eerst
 > dit document volledig (met name §7 en de besluiten in §4), plus
 > `/Users/stefanritsema/Documents/VibeCode/_WERKINSTRUCTIE-bouwsessie-opdracht.md`.
 > Je bent de plansessie: zet een ontwerp-panel op voor de migratie naar
-> React Router 7 framework mode volgens §7 stap 1, laat de resterende
-> beslispunten door Stefan beslissen, en schrijf daarna het bindende
-> opdrachtdocument voor de bouwsessie. De e2e-gate uit §7 stap 3 gaat
-> integraal in het opdrachtdocument; de besluiten in §4 heropen je niet.
+> React Router 7 framework mode volgens §7.1, leg externe/stagingkeuzes aan
+> Stefan voor, en schrijf daarna het bindende opdrachtdocument. Neem iedere
+> releaseblokker uit §7.2 en de volledige gate uit §7.4 integraal over.
 
-> **Fase D (architectuur, ná de SSR-cutover):** Lees eerst dit document
-> volledig plus `src/data/brands.ts` en `src/pages/Brand.tsx` (patroon —
-> let op: paden kunnen na de SSR-migratie gewijzigd zijn; volg de nieuwe
-> structuur). Bouw §8 stap 1. Daarna per gids een eigen sessie/PR: schrijf
-> gids N uit de kalender in §8.3 volgens formaat §8.4 en het
-> redactiestatuut §8.2 (claim-check verplicht in de PR-beschrijving).
+> **Fase D0:** Lees §8 en inventariseer de genoemde bestaande pagina's. Bouw
+> het claimsregister en redactiestatuut. Publiceer of herschrijf niets voordat
+> Stefan de reviewerrol, Chris' zichtbaarheid, reviewbudget en tien
+> prioriteitsproducten heeft bevestigd.
+
+> **Fase D (ná SSR én D0):** Bouw §9.1 in de nieuwe SSR-structuur. Lever daarna
+> één gids per PR volgens §9.2 en de volledige publicatiepoort. Een AI-check of
+> disclaimer vervangt nooit de menselijke claimsgoedkeuring.
 
 ---
 
-*Onderzoek en plan: Claude Fable, 29-7-2026. Nulmeting-bronnen: Google
-Search Console (property https://www.hlty.shop), site:-queries, curl-audits
-op www.hlty.shop en checkout.hlty.shop, code-audit Fase 8/10-bestanden.*
+## 13. Primaire referenties voor uitvoering
+
+- [Google Merchant-listing structured data](https://developers.google.com/search/docs/appearance/structured-data/merchant-listing)
+  en [productspecificatie](https://support.google.com/merchants/answer/7052112).
+- [Shopify API-versionering](https://shopify.dev/docs/api/usage/versioning).
+- [React Router framework modes](https://reactrouter.com/start/modes),
+  [SSR-configuratie](https://reactrouter.com/start/framework/rendering) en
+  [routeheaders](https://reactrouter.com/how-to/headers).
+- [EU Claims Regulation](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A02006R1924-20141213),
+  [EU Claims Register](https://food.ec.europa.eu/food-safety/labelling-and-nutrition/nutrition-and-health-claims/eu-register-health-claims_en)
+  en [NVWA-regels voor online promotie](https://www.nvwa.nl/onderwerpen/voedselveiligheid/voedingsclaims-en-gezondheidsclaims/regels-voor-online-promoten-van-levensmiddelen).
+- [Google people-first content](https://developers.google.com/search/docs/fundamentals/creating-helpful-content),
+  [review markup](https://developers.google.com/search/docs/appearance/structured-data/review-snippet)
+  en [linkspambeleid](https://developers.google.com/search/docs/essentials/spam-policies).
+
+*Oorspronkelijk onderzoek en plan: Claude Fable, 29-7-2026. Uitvoeringsaudit
+en live nulmeting aangescherpt op 2-8-2026 op basis van code, Shopify Storefront
+API, Google Search Console, PageSpeed, Bing Webmaster Tools en Merchant Center.*

@@ -9,10 +9,11 @@ B-uitrol → D0 → D → E**. Contentonderzoek kan parallel lopen, maar nieuwe
 claimdragende content gaat pas live na D0. De oorspronkelijke bot-renderer
 blijft vervallen ten gunste van de SSR-migratie.
 
-**Externe beslispoorten:** een Bing-site toevoegen, een Merchant
-Center-account aanmaken, publiceren naar productie, de SSR-cutover en het
-activeren van reviews vereisen elk een expliciete bevestiging op het moment
-van uitvoeren. Lokale bouw, tests en preview-controles mogen zelfstandig.
+**Externe beslispoorten:** Bing en het Merchant Center-account zijn op 2-8 na
+expliciete bevestiging aangemaakt. De productfeed aanmelden, publiceren naar
+productie, de SSR-cutover en het activeren van reviews vereisen elk opnieuw een
+expliciete bevestiging op het moment van uitvoeren. Lokale bouw, tests en
+preview-controles mogen zelfstandig.
 
 ---
 
@@ -150,8 +151,9 @@ geen methode om zwakke of dubbele pagina's alsnog te laten indexeren.
    niet in de sitemap.
 4. **Bing Webmaster Tools.** HLTY toevoegen aan het bestaande account,
    sitemap aanmelden en daarna Search Performance, AI Performance, IndexNow
-   en Site Scan als meetbronnen gebruiken. **Status 2-8:** account aanwezig,
-   HLTY ontbreekt; toevoegen wacht op Stefans externe bevestiging.
+   en Site Scan als meetbronnen gebruiken. **Status 2-8:** ✅
+   `https://www.hlty.shop/` is via het HLTY Search Console-account geïmporteerd;
+   `/sitemap.xml` staat in Bing op `Imported - Processing`.
 5. **Lighthouse/PageSpeed-baseline.** Vastgelegd op 2-8-2026 met Lighthouse
    13.4.1, koude paginalaad:
 
@@ -183,10 +185,13 @@ na deploy curl-bewijs van de redirectmatrix; Search Console- en
 PageSpeed-cijfers hierboven vastgelegd; bestaande niet-gerelateerde
 werkmapwijzigingen niet meenemen in de commit.
 
-**Controle lokaal 2-8:** ✅ `vercel.json` parseert; ✅ productiebuild; ✅
-desktop- en mobiele preview zonder foutoverlay of consolefouten; ✅ alle zes
-WebP-beelden laden met de verwachte intrinsieke afmetingen. Openstaand: preview-
-of productiedeploy, redirectmatrix en nieuwe PageSpeed-run op de publieke URL.
+**Controle lokaal/preview 2-8:** ✅ `vercel.json` parseert; ✅ productiebuild;
+✅ desktop- en mobiele lokale preview zonder foutoverlay of consolefouten; ✅
+alle zes WebP-beelden laden met de verwachte intrinsieke afmetingen; ✅ branch
+`codex/hlty-seo-uitvoering` gepusht; ✅ Vercel-preview `Ready` en de homepage
+laadt onder de juiste titel. Openstaand: redirectmatrix en nieuwe PageSpeed-run
+na een eventuele productiedeploy. De hostgebonden apexredirect kan niet op het
+willekeurige previewdomein worden bewezen.
 
 ---
 
@@ -212,18 +217,31 @@ het variant-URL-contract uit §6.3 is gebouwd en getest.
 
 ### 6.2 Beslispoorten vóór bouw en registratie
 
-1. **Verzending eerst waarheidsgetrouw maken.** Home en `llms.txt` noemen
-   gratis verzending vanaf €50, terwijl het zichtbare verzendbeleid alleen
-   zegt dat kosten in de checkout worden berekend. Stefan bevestigt eerst de
-   echte Shopify-tarieven, drempel, verwerkingstijd en bezorgtermijn. Site,
-   checkout, schema.org en Merchant Center worden daarna exact gelijkgemaakt.
+1. **Verzending eerst waarheidsgetrouw maken.** Shopify rekent in het algemene
+   Nederlandse profiel momenteel **€4,95 voor iedere order vanaf €0**; er is
+   géén gratis-verzenddrempel en geen transittijd ingesteld. Home, policy-meta
+   en `llms.txt` beloven wel gratis verzending vanaf €50. Praktijktests kwamen
+   na circa 1,5–2 dagen aan, maar handling en transit zijn niet afzonderlijk
+   bevestigd. Stefan kiest daarom eerst: Shopify gratis maken vanaf exact €50,
+   of de publieke gratis-verzendclaim verwijderen. Site, checkout, schema.org
+   en Merchant Center worden daarna exact gelijkgemaakt.
 2. **Pilotselectie.** Bij voorkeur gebruikt Stefan een omzet-/Meta-toplijst.
    Zonder die lijst geldt een vaste, merkgespreide selectie van 40 handles:
    20 conventionele supplementen/voeding, 15 fysio-/medische hulpmiddelen en
-   5 botanicals die handmatig door de claims-poort zijn gekomen.
-3. **Externe registratie.** Het huidige Google-account heeft nog geen
-   Merchant Center-toegang. Accountaanmaak, voorwaarden accepteren en de feed
-   aanmelden gebeuren alleen na expliciete bevestiging en accountkeuze.
+   5 botanicals die handmatig door de claims-poort zijn gekomen. De technische
+   40-productselectie is live gevalideerd; alleen de vijf botanicals wachten nog
+   op een benoemde claimsreviewer en inhoudshash.
+3. **Retourbeleid gelijkmaken.** Het geschreven beleid geeft 14 dagen om te
+   herroepen en daarna 14 dagen om te verzenden; Home belooft ten onrechte
+   `30 dagen retourgarantie`. Stefan bevestigt dat HLTY de retourzending betaalt,
+   maar dat en de werkwijze staan nog niet publiek. Voor Merchant geldt daarom
+   een aanmeldtermijn van 14 dagen en `FreeReturn`, pas nadat site en Shopify
+   dezelfde tekst tonen.
+4. **Externe registratie.** ✅ Merchant Center-account **HLTY / 5832930423** is
+   op 2-8 aangemaakt onder `info@hlty.shop`, met het geregistreerde HLTY-adres
+   en Nederland als enige verkoopland. Het account staat op 3 van 6 taken. De
+   automatische sitescan, productimport, verzending en retour zijn bewust
+   uitgesteld totdat bovenstaande poorten en product-SSR groen zijn.
 
 ### 6.3 Technische pilotfeed — exact 40 producten
 
@@ -251,13 +269,16 @@ het variant-URL-contract uit §6.3 is gebouwd en getest.
 
 ### 6.4 Betrouwbaarheid van endpoint en brondata
 
-- Shopify pagineren in blokken van maximaal 100 en nested variantpaginering
-  expliciet bewaken. Bij 429, 5xx of GraphQL-fouten begrensd opnieuw proberen.
+- De pilot vraagt de expliciete allowlist in vier sequentiële Shopify-queries
+  van tien handles op. Cataloguspaginering en nested variantpaginering horen
+  pas bij de latere uitrol. Bij 429, 5xx of retrybare GraphQL-fouten begrensd
+  opnieuw proberen.
 - Eén mislukte pagina maakt de hele response 503; nooit een lege of gedeeltelijke
   feed met status 200. Foutresponses: `no-store`, `Retry-After`.
 - `/merchant-feed.xml` wordt vóór de SPA/SSR-catch-all afgehandeld, ondersteunt
   `GET` en `HEAD` en retourneert `application/rss+xml; charset=utf-8`.
-- Succescache: `max-age=0, s-maxage=900, stale-while-revalidate=3600,
+- Browser/Merchant-cache: `Cache-Control: public, max-age=0, must-revalidate`.
+  Vercel-CDN-cache: `public, s-maxage=900, stale-while-revalidate=3600,
   stale-if-error=86400`.
 - De quality gate krijgt een aparte API-typecheck: de huidige Vite-build neemt
   `api/*.ts` niet mee.
@@ -267,11 +288,14 @@ het variant-URL-contract uit §6.3 is gebouwd en getest.
 1. Valideer lokaal/preview exact 40 unieke items, XML, veldlimieten, GTIN's,
    afbeeldingen, productlinks en foutscenario's. Vergelijk alle 40 tegen
    Shopify en minimaal 10 tegen zichtbare pagina plus JSON-LD.
-2. Na expliciet akkoord: registreer de pilotfeed in Merchant Center en volg
+2. Migreer daarna minstens de productroute naar SSR. De ruwe server-HTML moet
+   zonder JavaScript naam, prijs, voorraad, zichtbare producttekst en een met
+   de feed overeenkomende concrete `Offer` bevatten.
+3. Na expliciet akkoord: registreer de pilotfeed in Merchant Center en volg
    diagnostiek 3–7 dagen. Go/no-go = 100% bron verwerkt, nul technische
    attribuutfouten en nul prijs-/voorraad-/landingsmismatches. Beleidsafkeuringen
    worden per cohort gerapporteerd; een arbitrair percentage vervalt.
-3. Volledige uitrol volgt pas ná SSR, variantconsistentie en een stabiele pilot.
+4. Volledige uitrol volgt pas ná SSR, variantconsistentie en een stabiele pilot.
    Dan worden alle technisch én beleidsmatig geschikte producten toegelaten;
    niet blind alle 1.041.
 
@@ -587,9 +611,9 @@ curl verifiëren; alleen de bestanden van je eigen fase committen.
 > niet-gerelateerde wijzigingen niet mee.
 
 > **Fase B-pilot:** Lees dit document en voer §6 in volgorde uit. Stop vóór
-> build bij ontbrekende verzendgegevens. Bouw de allowlistfeed en tests; meld
-> niets extern aan zonder expliciet akkoord. Werk §6 bij met selectiebron,
-> account-ID, feedstatus en afkeuringsredenen.
+> build zolang de verzendkeuze openstaat. Bouw daarna de allowlistfeed en tests;
+> registreer hem pas ná product-SSR en expliciet akkoord. Werk §6 bij met
+> selectiebron, account-ID, feedstatus en afkeuringsredenen.
 
 > **Fase C (SSR) — start met de PLANSESSIE, niet met bouwen:** Lees eerst
 > dit document volledig (met name §7 en de besluiten in §4), plus

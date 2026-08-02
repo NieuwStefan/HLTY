@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Mail, MapPin, Building2, ArrowRight } from 'lucide-react';
+import { Mail, MapPin, Building2, ArrowRight, Phone } from 'lucide-react';
 import SEO from '../components/SEO';
 
 export default function Contact() {
@@ -37,7 +37,7 @@ export default function Contact() {
             horen en we komen er samen uit. Persoonlijk, kort op de bal en zonder gedoe.
           </p>
 
-          <div className="mt-8">
+          <div className="mt-8 flex flex-wrap gap-3">
             <a
               href="mailto:info@hlty.shop"
               className="btn-primary inline-flex items-center gap-3 px-7 py-3.5 text-sm group"
@@ -45,6 +45,13 @@ export default function Contact() {
               <Mail className="w-4 h-4" />
               <span>info@hlty.shop</span>
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </a>
+            <a
+              href="tel:+31648548450"
+              className="inline-flex items-center gap-3 px-7 py-3.5 text-sm rounded-full border border-white/20 text-white hover:border-white/40 transition-colors"
+            >
+              <Phone className="w-4 h-4" />
+              <span>06 48 54 84 50</span>
             </a>
           </div>
         </div>

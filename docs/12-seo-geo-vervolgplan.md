@@ -217,26 +217,32 @@ het variant-URL-contract uit §6.3 is gebouwd en getest.
 
 ### 6.2 Beslispoorten vóór bouw en registratie
 
-1. **Verzending eerst waarheidsgetrouw maken.** Shopify rekent in het algemene
-   Nederlandse profiel momenteel **€4,95 voor iedere order vanaf €0**; er is
-   géén gratis-verzenddrempel en geen transittijd ingesteld. Home, policy-meta
-   en `llms.txt` beloven wel gratis verzending vanaf €50. Praktijktests kwamen
-   na circa 1,5–2 dagen aan, maar handling en transit zijn niet afzonderlijk
-   bevestigd. Stefan kiest daarom eerst: Shopify gratis maken vanaf exact €50,
-   of de publieke gratis-verzendclaim verwijderen. Site, checkout, schema.org
-   en Merchant Center worden daarna exact gelijkgemaakt.
-2. **Pilotselectie.** Bij voorkeur gebruikt Stefan een omzet-/Meta-toplijst.
-   Zonder die lijst geldt een vaste, merkgespreide selectie van 40 handles:
-   20 conventionele supplementen/voeding, 15 fysio-/medische hulpmiddelen en
-   5 botanicals die handmatig door de claims-poort zijn gekomen. De technische
-   40-productselectie is live gevalideerd; alleen de vijf botanicals wachten nog
-   op een benoemde claimsreviewer en inhoudshash.
-3. **Retourbeleid gelijkmaken.** Het geschreven beleid geeft 14 dagen om te
-   herroepen en daarna 14 dagen om te verzenden; Home belooft ten onrechte
-   `30 dagen retourgarantie`. Stefan bevestigt dat HLTY de retourzending betaalt,
-   maar dat en de werkwijze staan nog niet publiek. Voor Merchant geldt daarom
-   een aanmeldtermijn van 14 dagen en `FreeReturn`, pas nadat site en Shopify
-   dezelfde tekst tonen.
+1. **Verzending eerst waarheidsgetrouw maken.** ✅ Op 2-8 is in het algemene
+   Nederlandse Shopify-profiel ingesteld en heropend ter controle: €4,95 onder
+   €50 en gratis vanaf exact €50. De lokale sitecopy en `ShippingService`-
+   markup zijn gelijkgemaakt. De geobserveerde totale bezorging van circa
+   1,5–2 dagen is niet als aparte handling-/transittijd gemarkeerd, omdat die
+   onderdelen niet afzonderlijk zijn bevestigd.
+2. **Pilotselectie.** ✅ De vaste selectie bevat nu 20 conventionele
+   supplementen/voeding en 20 fysio-/zorghulpmiddelen. De vijf botanicals zijn
+   vervangen, zodat de pilot niet afhankelijk is van een nog niet ingerichte
+   botanicals-claimreview. Alle 40 zijn live read-only gevalideerd op één
+   variant, EUR-prijs, unieke SKU/GTIN/variant-ID en beeld van minimaal 500×500.
+   Een extra inhoudsscreening blokkeerde daarnaast Ashwagandha- en twee te brede
+   prestatie-/herstelbeschrijvingen; die drie producten zijn vervangen door
+   feitelijke laagrisicoproducten. Voor de volledige landingspagina's blijft de
+   formele claimsreview uit fase D0 vóór externe feedregistratie verplicht.
+3. **Retourbeleid gelijkmaken.** 🚧 De lokale sitecopy vermeldt nu 14 dagen om
+   te herroepen, daarna 14 dagen om kosteloos terug te sturen, en de juiste
+   terugbetalingsregels. De onjuiste `30 dagen retourgarantie` en onbewezen
+   `4.8/5` zijn verwijderd; `MerchantReturnPolicy` staat alleen op de zichtbare
+   retourpagina en het wettelijke modelformulier is toegevoegd. Vóór productie
+   ontbreken nog een bevestigd operationeel retouradres/labelproces en de sinds
+   25-6-2026 vereiste digitale herroepingsfunctie met onmiddellijke bevestiging.
+   Een e-maillink alleen is daarvoor niet voldoende. Ook moet de
+   verzegelingsuitzondering vóór aankoop product-specifiek zichtbaar worden
+   gemaakt; zonder die melding kan
+   HLTY zich er bij het betreffende product niet op beroepen.
 4. **Externe registratie.** ✅ Merchant Center-account **HLTY / 5832930423** is
    op 2-8 aangemaakt onder `info@hlty.shop`, met het geregistreerde HLTY-adres
    en Nederland als enige verkoopland. Het account staat op 3 van 6 taken. De
@@ -247,10 +253,12 @@ het variant-URL-contract uit §6.3 is gebouwd en getest.
 
 - Gebruik een expliciete `PILOT_HANDLES`-allowlist; nooit toevallig de eerste
   veertig resultaten. Sluit ontbrekende/dubbele identifiers, beelden kleiner
-  dan 500×500, niet-bestelbare items en niet-gecontroleerde claims uit.
-- Pin de Shopify Storefront API op de actuele geteste stabiele versie. De code
-  vraagt nu `2024-01` en wordt door Shopify stil naar een nieuwere versie
-  doorgestuurd; na wijziging wordt ook de geretourneerde API-versie bewaakt.
+  dan 500×500, niet-gepubliceerde items en niet-gecontroleerde claims uit. Een
+  tijdelijk uitverkocht pilotitem blijft als `out_of_stock` staan, zodat een
+  voorraadwijziging de vaste pilot niet stil verkleint.
+- Pin de Shopify Storefront API op de actuele geteste stabiele versie. ✅ Feed,
+  sitemap en browserclient gebruiken nu `2026-07`; de feed controleert ook de
+  door Shopify geretourneerde API-versie en faalt bij een afwijking.
 - Eén feeditem per echte variant met stabiele ID
   `shopify-v-<numerieke-variant-id>`. Gebruik geen volledige Shopify-GID en
   stuur zonder echte variantgroep geen `item_group_id` mee.
@@ -259,6 +267,11 @@ het variant-URL-contract uit §6.3 is gebouwd en getest.
   producttype en `custom_label_0=pilot`. MPN en Google-categorie alleen uit een
   betrouwbare bron; nooit verzinnen. `identifier_exists=false` alleen na
   fabrikantbevestiging dat GTIN én MPN werkelijk niet bestaan.
+- Leverancierstekst gaat niet ongewijzigd naar Google. De pilotbeschrijving
+  bestaat uitsluitend uit de feitelijke titel, het merk en het producttype.
+  De volledige Shopify-brontekst blijft wel onderdeel van het driftcontract,
+  omdat die tekst op de landingspagina zichtbaar is en apart beoordeeld moet
+  blijven worden.
 - Voor een toekomstig product met meerdere varianten geldt
   `?variant=<numerieke-id>`. Die URL moet in de initiële render de juiste
   variant, prijs, voorraad, afbeelding en concrete `Offer` tonen. Een ongeldige
@@ -266,6 +279,11 @@ het variant-URL-contract uit §6.3 is gebouwd en getest.
 - Product-JSON-LD krijgt de echte SKU, meest specifieke `gtin8/12/13/14`,
   `itemCondition=NewCondition`, variantbeeld en concrete `Offer`. Feed,
   zichtbare pagina, Storefront API en JSON-LD moeten dezelfde waarden tonen.
+- De pilot legt per handle variant-ID, SKU, Google-geschikte GTIN en een hash
+  van de volledige genormaliseerde Shopify-brontekst vast. Iedere
+  leverancierssync die een van deze waarden wijzigt blokkeert de hele feed
+  totdat de wijziging bewust is beoordeeld. Dit technische driftcontract
+  vervangt geen claimsreview van de landingspagina.
 
 ### 6.4 Betrouwbaarheid van endpoint en brondata
 
@@ -280,8 +298,17 @@ het variant-URL-contract uit §6.3 is gebouwd en getest.
 - Browser/Merchant-cache: `Cache-Control: public, max-age=0, must-revalidate`.
   Vercel-CDN-cache: `public, s-maxage=900, stale-while-revalidate=3600,
   stale-if-error=86400`.
-- De quality gate krijgt een aparte API-typecheck: de huidige Vite-build neemt
-  `api/*.ts` niet mee.
+- De quality gate bevat een aparte API-typecheck en offline tests; `prebuild`
+  dwingt beide af vóór iedere productiebuild.
+
+**Status lokale pilot 2-8:** ✅ `api/merchant-feed.ts` en de rewrite zijn
+gebouwd; ✅ API `2026-07` wordt gepind én via de Shopify-responseheader bewaakt;
+✅ vier sequentiële batches en alles-of-niets-validatie; ✅ live read-only exact
+40 items, alle 40 op voorraad, feitelijke feedbeschrijvingen en feed circa 40 kB;
+✅ 37 offline tests,
+API-typecheck en productiebuild groen, inclusief bron-/tekstdrift, backorders,
+beeld-URL's, XML 1.0-tekens en negatieve Shopify-responses. De endpoint is nog niet extern
+geregistreerd en de wijzigingen zijn nog niet naar productie gebracht.
 
 ### 6.5 Diagnose, SSR-koppeling en uitrol
 
@@ -291,7 +318,7 @@ het variant-URL-contract uit §6.3 is gebouwd en getest.
 2. Migreer daarna minstens de productroute naar SSR. De ruwe server-HTML moet
    zonder JavaScript naam, prijs, voorraad, zichtbare producttekst en een met
    de feed overeenkomende concrete `Offer` bevatten.
-3. Na expliciet akkoord: registreer de pilotfeed in Merchant Center en volg
+3. Na product-SSR én expliciet akkoord: registreer de pilotfeed in Merchant Center en volg
    diagnostiek 3–7 dagen. Go/no-go = 100% bron verwerkt, nul technische
    attribuutfouten en nul prijs-/voorraad-/landingsmismatches. Beleidsafkeuringen
    worden per cohort gerapporteerd; een arbitrair percentage vervalt.

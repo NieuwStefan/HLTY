@@ -19,6 +19,7 @@ import JsonLd from '../components/JsonLd';
 import { getBrand } from '../data/brands';
 import { findPrimaryCategory } from '../lib/categories';
 import { formatProductTitle } from '../lib/product-title';
+import { buildProductSchema } from '../lib/product-schema';
 
 interface ProductLocationState {
   from?: {
@@ -159,7 +160,7 @@ export default function Product() {
     if (fb) breadcrumbCategory = { handle: fb.handle, label: fb.label };
   }
 
-  const seoTitle = formatProductTitle(product.title);
+  const seoTitle = formatProductTitle(product.title, product.vendor);
   const seoDescription = (product.description || `${seoTitle} bij HLTY — door fysiotherapeuten geselecteerd assortiment.`)
     .replace(/\s+/g, ' ')
     .trim()
@@ -167,49 +168,7 @@ export default function Product() {
 
   // JSON-LD: Product schema + BreadcrumbList
   const productUrl = `https://www.hlty.shop/product/${product.handle}`;
-  const variantPrices = product.variants
-    .map((v) => parseFloat(v.price.amount))
-    .filter((n) => Number.isFinite(n));
-  const lowPrice = variantPrices.length ? Math.min(...variantPrices).toFixed(2) : undefined;
-  const highPrice = variantPrices.length ? Math.max(...variantPrices).toFixed(2) : undefined;
-  const currency = product.variants[0]?.price.currencyCode || 'EUR';
-  const anyInStock = product.variants.some((v) => v.availableForSale);
-
-  const productSchema: Record<string, unknown> = {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    name: seoTitle,
-    description: seoDescription,
-    image: product.images.map((i) => i.url).slice(0, 6),
-    sku: product.variants[0]?.id,
-    url: productUrl,
-    ...(product.vendor ? { brand: { '@type': 'Brand', name: product.vendor } } : {}),
-    ...(lowPrice && highPrice
-      ? {
-          offers: lowPrice === highPrice
-            ? {
-                '@type': 'Offer',
-                url: productUrl,
-                priceCurrency: currency,
-                price: lowPrice,
-                availability: anyInStock
-                  ? 'https://schema.org/InStock'
-                  : 'https://schema.org/OutOfStock',
-              }
-            : {
-                '@type': 'AggregateOffer',
-                url: productUrl,
-                priceCurrency: currency,
-                lowPrice,
-                highPrice,
-                offerCount: product.variants.length,
-                availability: anyInStock
-                  ? 'https://schema.org/InStock'
-                  : 'https://schema.org/OutOfStock',
-              },
-        }
-      : {}),
-  };
+  const productSchema = buildProductSchema(product, selectedVariant, seoDescription);
 
   const breadcrumbItems: { name: string; url: string }[] = [
     { name: 'Home', url: 'https://www.hlty.shop/' },

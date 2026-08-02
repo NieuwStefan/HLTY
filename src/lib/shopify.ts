@@ -1,6 +1,6 @@
 const SHOPIFY_DOMAIN = import.meta.env.VITE_SHOPIFY_DOMAIN;
 const STOREFRONT_TOKEN = import.meta.env.VITE_STOREFRONT_TOKEN;
-const API_VERSION = import.meta.env.VITE_API_VERSION || '2024-01';
+const API_VERSION = '2026-07';
 
 // ---------- Types ----------
 
@@ -17,8 +17,11 @@ export interface Money {
 export interface ProductVariant {
   id: string;
   title: string;
+  sku: string | null;
+  barcode: string | null;
   price: Money;
   availableForSale: boolean;
+  currentlyNotInStock: boolean;
   image: ShopifyImage | null;
   selectedOptions: { name: string; value: string }[];
 }
@@ -192,8 +195,11 @@ const PRODUCT_FRAGMENT = `
         node {
           id
           title
+          sku
+          barcode
           price { amount currencyCode }
           availableForSale
+          currentlyNotInStock
           image { url altText }
           selectedOptions { name value }
         }
@@ -225,8 +231,11 @@ const PRODUCT_CARD_FRAGMENT = `
         node {
           id
           title
+          sku
+          barcode
           price { amount currencyCode }
           availableForSale
+          currentlyNotInStock
           image { url altText }
           selectedOptions { name value }
         }
@@ -257,8 +266,11 @@ const CART_FRAGMENT = `
             ... on ProductVariant {
               id
               title
+              sku
+              barcode
               price { amount currencyCode }
               availableForSale
+              currentlyNotInStock
               image { url altText }
               selectedOptions { name value }
               product { title handle vendor }

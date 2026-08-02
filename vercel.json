@@ -1,5 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/merchant-feed.ts": { "maxDuration": 60 }
+  },
   "redirects": [
     {
       "source": "/:path*",
@@ -28,6 +31,7 @@
   ],
   "rewrites": [
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
+    { "source": "/merchant-feed.xml", "destination": "/api/merchant-feed" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

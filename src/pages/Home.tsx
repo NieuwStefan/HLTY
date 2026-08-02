@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import {
   Zap, Dumbbell,
   ArrowRight, Leaf, CheckCircle, ShieldCheck, Truck,
-  Award, FlaskConical, Pill, Apple, Cross, Search, ClipboardCheck, PackageCheck,
+  FlaskConical, Pill, Apple, Cross, Search, ClipboardCheck, PackageCheck,
   BadgeCheck, Beaker,
 } from 'lucide-react';
 import HealthConsultation from '../components/HealthConsultation';
@@ -25,7 +25,7 @@ const TRUST_STATS = [
   { value: '900+', label: 'Producten', icon: FlaskConical },
   { value: '100%', label: 'Physio-expertise', icon: ShieldCheck },
   { value: 'Gratis', label: 'Verzending vanaf €50', icon: Truck },
-  { value: '4.8/5', label: 'Klantwaardering', icon: Award },
+  { value: 'Gratis', label: 'Retour na aanmelding', icon: BadgeCheck },
 ];
 
 const SELECTION_STEPS = [
@@ -439,7 +439,7 @@ export default function Home() {
               </div>
               <div className="flex items-center gap-2 text-white/50 text-sm">
                 <CheckCircle className="w-4 h-4 text-[var(--color-primary)]" />
-                30 dagen retourgarantie
+                Gratis retour na aanmelding
               </div>
               <div className="flex items-center gap-2 text-white/50 text-sm">
                 <CheckCircle className="w-4 h-4 text-[var(--color-primary)]" />

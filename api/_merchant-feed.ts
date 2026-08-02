@@ -1,11 +1,11 @@
 import { createHash } from 'node:crypto';
 
-import { isGoogleMerchantGtin } from '../src/lib/gtin';
-import { formatProductTitle } from '../src/lib/product-title';
+import { isGoogleMerchantGtin } from '../src/lib/gtin.js';
+import { formatProductTitle } from '../src/lib/product-title.js';
 import {
   PILOT_CONTRACT,
   type PilotContract,
-} from './_merchant-pilot-contract';
+} from './_merchant-pilot-contract.js';
 
 export const SHOPIFY_API_VERSION = '2026-07';
 export const PILOT_BATCH_SIZE = 10;

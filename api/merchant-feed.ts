@@ -3,7 +3,7 @@ import {
   readFeedConfig,
   type FeedConfig,
   type FeedDependencies,
-} from './_merchant-feed';
+} from './_merchant-feed.js';
 
 const SUCCESS_HEADERS = {
   'Content-Type': 'application/rss+xml; charset=utf-8',

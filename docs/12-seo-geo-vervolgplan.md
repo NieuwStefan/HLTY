@@ -305,7 +305,7 @@ het variant-URL-contract uit §6.3 is gebouwd en getest.
 gebouwd; ✅ API `2026-07` wordt gepind én via de Shopify-responseheader bewaakt;
 ✅ vier sequentiële batches en alles-of-niets-validatie; ✅ live read-only exact
 40 items, alle 40 op voorraad, feitelijke feedbeschrijvingen en feed circa 40 kB;
-✅ 37 offline tests,
+✅ 38 offline tests,
 API-typecheck en productiebuild groen, inclusief bron-/tekstdrift, backorders,
 beeld-URL's, XML 1.0-tekens en negatieve Shopify-responses. De endpoint is nog niet extern
 geregistreerd en de wijzigingen zijn nog niet naar productie gebracht.

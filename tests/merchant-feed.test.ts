@@ -683,3 +683,15 @@ test('Merchant-rewrite staat vóór de SPA-catch-all', async () => {
   assert.ok(feedIndex < spaIndex);
   assert.equal(config.rewrites[feedIndex].destination, '/api/merchant-feed');
 });
+
+test('Vercel-functie gebruikt Node-ESM-resolveerbare runtime-imports', async () => {
+  for (const file of ['api/merchant-feed.ts', 'api/_merchant-feed.ts']) {
+    const source = await readFile(new URL(`../${file}`, import.meta.url), 'utf8');
+    const relativeImports = [...source.matchAll(/from\s+['"](\.{1,2}\/[^'"]+)['"]/g)]
+      .map((match) => match[1]);
+    assert.ok(relativeImports.length > 0, `Geen relatieve imports gevonden in ${file}`);
+    for (const specifier of relativeImports) {
+      assert.match(specifier, /\.js$/, `Node-ESM-import mist .js in ${file}: ${specifier}`);
+    }
+  }
+});

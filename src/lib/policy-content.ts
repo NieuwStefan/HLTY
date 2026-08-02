@@ -78,41 +78,49 @@ const VERZENDING = `
 <h2>1. Leveringsgebied</h2>
 <p>HLTY richt zich momenteel uitsluitend op leveringen binnen Nederland. Bestellingen met een afleveradres buiten Nederland kunnen op dit moment helaas niet worden verwerkt.</p>
 
-<h2>2. Verwerkingstijd</h2>
-<p>Wij streven ernaar om bestellingen zo snel mogelijk te verwerken. In de regel wordt uw bestelling binnen 1 tot 2 werkdagen gereedgemaakt voor verzending.</p>
+<h2>2. Verwachte bezorging</h2>
+<p>Bestellingen worden doorgaans binnen 1 tot 2 werkdagen bezorgd. Deze termijn is indicatief. De uiteindelijke bezorging is mede afhankelijk van het bestelmoment, de beschikbaarheid van het product en onze logistieke partners.</p>
 
-<h2>3. Levertijden</h2>
-<p>De opgegeven levertijden op de website zijn indicatief. Omdat HLTY werkt met een gecureerd assortiment van eigen producten en hoogwaardige partners, kan de levertijd variëren per producttype. Wij doen ons uiterste best om de indicatieve levertijd te halen, maar zijn hierbij mede afhankelijk van onze logistieke partners.</p>
+<h2>3. Verzendkosten</h2>
+<p>Voor bezorging binnen Nederland betaalt u € 4,95. Bij een bestelbedrag van € 50,00 of hoger is de verzending gratis. De definitieve verzendkosten worden in de checkout getoond voordat u betaalt.</p>
 
-<h2>4. Verzendkosten</h2>
-<p>De verzendkosten worden duidelijk weergegeven in de checkout voordat u de betaling definitief maakt. Deze kosten kunnen variëren op basis van het gewicht van de bestelling of de gekozen verzendmethode.</p>
-
-<h2>5. Track &amp; Trace</h2>
+<h2>4. Track &amp; Trace</h2>
 <p>Zodra uw pakket is overgedragen aan onze bezorgpartner, ontvangt u per e-mail een Track &amp; Trace-code. Hiermee kunt u de status van uw zending en de verwachte bezorgtijd volgen.</p>
 
-<h2>6. Onjuist adres</h2>
+<h2>5. Onjuist adres</h2>
 <p>De klant is verantwoordelijk voor het verstrekken van de juiste aflevergegevens. Indien een pakket niet kan worden afgeleverd door een foutief adres, zijn de kosten voor een herhaalde verzending voor rekening van de klant.</p>
 
-<h2>7. Beschadiging bij ontvangst</h2>
-<p>Controleer uw pakket direct bij ontvangst. Indien het pakket of de producten beschadigd zijn, verzoeken wij u dit binnen 48 uur na ontvangst te melden via <a href="mailto:info@hlty.shop">info@hlty.shop</a>, bij voorkeur met foto's van de schade.</p>
+<h2>6. Beschadiging bij ontvangst</h2>
+<p>Controleer uw pakket direct bij ontvangst. Indien het pakket of de producten beschadigd zijn, verzoeken wij u dit bij voorkeur binnen 48 uur na ontvangst te melden via <a href="mailto:info@hlty.shop">info@hlty.shop</a>, liefst met foto's van de schade. Een latere melding beperkt uw wettelijke rechten niet.</p>
 `;
 
 const RETOUR = `
 <h2>1. Bedenktijd en herroeping</h2>
-<p>U heeft het recht om uw bestelling tot 14 dagen na ontvangst zonder opgave van reden te annuleren. Na annulering heeft u nogmaals 14 dagen om het product retour te sturen. U krijgt dan het volledige orderbedrag inclusief verzendkosten gecrediteerd. Indien u gebruikmaakt van uw herroepingsrecht, zal het product met alle geleverde toebehoren en — indien redelijkerwijze mogelijk — in de originele staat en verpakking aan HLTY geretourneerd worden.</p>
+<p>U heeft na ontvangst 14 dagen bedenktijd. Binnen die termijn kunt u zonder opgave van reden op iedere ondubbelzinnige manier laten weten dat u de koop wilt herroepen, bijvoorbeeld per e-mail via <a href="mailto:info@hlty.shop?subject=Retour%20aanmelden">info@hlty.shop</a>. Vermeld daarbij bij voorkeur uw ordernummer. Na uw melding heeft u nog 14 dagen om het product terug te sturen.</p>
 
-<h2>2. Uitsluiting recht van retour (verzegelde producten)</h2>
-<p>Conform de wettelijke richtlijnen voor gezondheidsbescherming en hygiëne, is het herroepingsrecht niet van toepassing op de volgende producten zodra de verzegeling na levering is verbroken:</p>
-<ul>
-  <li><strong>Voedingssupplementen</strong>: supplementen waarvan de verzegeling (seal) is verbroken, kunnen om redenen van gezondheidsbescherming niet worden teruggenomen.</li>
-  <li><strong>Hygiënische producten</strong>: fysiotherapie- en herstelproducten (zoals foam rollers of oefenbanden) die om hygiënische redenen verzegeld zijn geleverd, kunnen niet worden geretourneerd als de verzegeling is verbroken.</li>
-</ul>
+<h2>2. Gratis retourzending</h2>
+<p>HLTY betaalt de kosten van de retourzending. Meld uw retour eerst bij ons aan; u ontvangt daarna de retourinstructies. Bewaar uw verzendbewijs en Track &amp; Trace-code totdat de retour volledig is verwerkt.</p>
 
-<h2>3. Zakelijke klanten (B2B)</h2>
+<h2>3. Staat van het product en verzegelde producten</h2>
+<p>Stuur het product met alle geleverde toebehoren en — voor zover redelijkerwijs mogelijk — in de originele staat en verpakking terug. U mag het product alleen gebruiken voor zover dat nodig is om het te beoordelen. Verdergaand gebruik kan leiden tot waardevermindering, maar laat het herroepingsrecht niet automatisch vervallen.</p>
+<p>Het herroepingsrecht vervalt na het verbreken van de verzegeling uitsluitend bij producten die om redenen van gezondheidsbescherming of hygiëne niet geschikt zijn om te worden teruggezonden. Deze uitzondering geldt alleen wanneer het product verzegeld is geleverd en dit vóór aankoop duidelijk bij het product is vermeld.</p>
+
+<h2>4. Zakelijke klanten (B2B)</h2>
 <p>Deze retourregels gelden uitsluitend voor consumenten (B2C). Voor zakelijke klanten die via HLTY Pro bestellen, geldt geen wettelijk herroepingsrecht. Eventuele gebreken dienen door zakelijke klanten direct gemeld te worden.</p>
 
-<h2>4. Terugbetaling</h2>
-<p>Zodra wij uw retourzending hebben ontvangen en gecontroleerd op de intacte verzegeling, storten wij het verschuldigde bedrag binnen 14 dagen terug via de oorspronkelijke betaalmethode.</p>
+<h2>5. Terugbetaling</h2>
+<p>Wij betalen uiterlijk binnen 14 dagen na uw herroepingsmelding en zonder extra kosten terug. Wij mogen wachten totdat wij het product hebben ontvangen of totdat u aantoont dat het is teruggestuurd, afhankelijk van wat het eerst gebeurt. Bij een volledige retour ontvangt u het aankoopbedrag en de standaard bezorgkosten van de heenzending terug. Bij een gedeeltelijke retour worden die oorspronkelijke bezorgkosten niet terugbetaald. De terugbetaling verloopt via dezelfde betaalmethode, tenzij u uitdrukkelijk met een andere methode instemt.</p>
+
+<h2>6. Modelformulier voor herroeping</h2>
+<p>U bent niet verplicht dit formulier te gebruiken. Als u dat wel wilt, kunt u onderstaande tekst invullen en per post of e-mail naar HLTY sturen. Het genoemde adres is voor de herroepingsmelding; stuur het product pas terug volgens de retourinstructies die u na aanmelding ontvangt.</p>
+<p><strong>Aan:</strong> HLTY VOF, Skrokdam 5, 8918 LB Leeuwarden, <a href="mailto:info@hlty.shop">info@hlty.shop</a></p>
+<p>Hierbij deel ik u mede dat ik onze overeenkomst betreffende de verkoop van de volgende producten herroep:</p>
+<p><strong>Product(en):</strong> ............................................................</p>
+<p><strong>Besteld op / ontvangen op:</strong> ............................................................</p>
+<p><strong>Naam consument:</strong> ............................................................</p>
+<p><strong>Adres consument:</strong> ............................................................</p>
+<p><strong>Datum:</strong> ............................................................</p>
+<p><strong>Handtekening:</strong> alleen nodig wanneer u dit formulier op papier indient.</p>
 `;
 
 const VOORWAARDEN = `
@@ -153,6 +161,7 @@ const CONTACT_INFORMATIE = `
 <p><strong>Bedrijfsvorm:</strong> Vennootschap Onder Firma (VOF)</p>
 <p><strong>Bezoekadres:</strong> Skrokdam 5, 8918 LB Leeuwarden</p>
 <p><strong>E-mailadres:</strong> <a href="mailto:info@hlty.shop">info@hlty.shop</a></p>
+<p><strong>Telefoonnummer:</strong> <a href="tel:+31648548450">06 48 54 84 50</a></p>
 <p><strong>Kamer van Koophandel (KvK) nummer:</strong> 98276441</p>
 `;
 
@@ -163,6 +172,7 @@ const WETTELIJKE_KENNISGEVING = `
   <li><strong>Rechtsvorm:</strong> Vennootschap Onder Firma</li>
   <li><strong>Vestigingsadres:</strong> Skrokdam 5, 8918 LB Leeuwarden, Nederland</li>
   <li><strong>E-mailadres:</strong> <a href="mailto:info@hlty.shop">info@hlty.shop</a></li>
+  <li><strong>Telefoonnummer:</strong> <a href="tel:+31648548450">06 48 54 84 50</a></li>
   <li><strong>Website:</strong> www.hlty.shop</li>
 </ul>
 

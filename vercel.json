@@ -1,5 +1,15 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/merchant-feed.ts": { "maxDuration": 60 }
+  },
   "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "hlty.shop" }],
+      "destination": "https://www.hlty.shop/:path*",
+      "permanent": true
+    },
     { "source": "/products/:handle", "destination": "/product/:handle", "permanent": true },
     { "source": "/products", "destination": "/alle-producten", "permanent": true },
     { "source": "/collections/all", "destination": "/alle-producten", "permanent": true },
@@ -21,6 +31,7 @@
   ],
   "rewrites": [
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
+    { "source": "/merchant-feed.xml", "destination": "/api/merchant-feed" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

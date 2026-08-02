@@ -8,6 +8,8 @@
 // en zijn gelijk aan de wettelijke kennisgeving in src/lib/policy-content.ts.
 
 import JsonLd from './JsonLd';
+import { merchantReturnPolicy, shippingService } from '../lib/merchant-policies';
+import { useLocation } from 'react-router-dom';
 
 const SITE_URL = 'https://www.hlty.shop';
 
@@ -72,5 +74,16 @@ const website = {
 };
 
 export default function SiteSchema() {
-  return <JsonLd data={[organization, website]} />;
+  const { pathname } = useLocation();
+  const organizationForPage = {
+    ...organization,
+    ...(pathname === '/beleid/retour'
+      ? { hasMerchantReturnPolicy: merchantReturnPolicy }
+      : {}),
+    ...(pathname === '/beleid/verzending'
+      ? { hasShippingService: shippingService }
+      : {}),
+  };
+
+  return <JsonLd data={[organizationForPage, website]} />;
 }

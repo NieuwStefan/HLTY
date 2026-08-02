@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Mail, MapPin } from 'lucide-react';
+import { Mail, MapPin, Phone } from 'lucide-react';
 import { useConsent } from '../context/ConsentContext';
 
 const CATEGORY_LINKS = [
@@ -51,6 +51,13 @@ export default function Footer() {
                 >
                   <Mail className="w-4 h-4" />
                   info@hlty.shop
+                </a>
+                <a
+                  href="tel:+31648548450"
+                  className="flex items-center gap-2 text-sm text-white/60 hover:text-[var(--color-primary)] transition-colors"
+                >
+                  <Phone className="w-4 h-4" />
+                  06 48 54 84 50
                 </a>
                 <div className="flex items-center gap-2 text-sm text-white/60">
                   <MapPin className="w-4 h-4" />

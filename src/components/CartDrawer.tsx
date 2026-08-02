@@ -232,7 +232,7 @@ export default function CartDrawer() {
                   </span>
                 </div>
                 <p className="text-xs text-[var(--color-muted)]">
-                  Verzendkosten worden berekend bij het afrekenen.
+                  Verzending € 4,95 · gratis vanaf € 50. De checkout toont het definitieve bedrag.
                 </p>
                 <a
                   href={checkoutHref}

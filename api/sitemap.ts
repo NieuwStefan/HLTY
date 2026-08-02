@@ -18,7 +18,7 @@ interface VercelResponse {
 const SITE_URL = 'https://www.hlty.shop';
 const SHOPIFY_DOMAIN = process.env.VITE_SHOPIFY_DOMAIN;
 const STOREFRONT_TOKEN = process.env.VITE_STOREFRONT_TOKEN;
-const API_VERSION = process.env.VITE_API_VERSION || '2024-01';
+const API_VERSION = '2026-07';
 
 const STATIC_PAGES: { path: string; priority: string; changefreq: string }[] = [
   { path: '/', priority: '1.0', changefreq: 'daily' },

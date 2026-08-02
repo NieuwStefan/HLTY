@@ -18,7 +18,9 @@
   waarbij klanten in 4 stappen (doel → specifieke vraag → dieet →
   leefstijl) een persoonlijk supplement-advies krijgen op basis van een
   deterministische, door fysiotherapeuten gecureerde mapping.
-- Gratis verzending vanaf €50, ~900 producten, geen lidmaatschap nodig.
+- Verzending binnen Nederland kost €4,95 en is gratis vanaf €50.
+- 14 dagen bedenktijd; na aanmelding nog 14 dagen om kosteloos te retourneren.
+- ~900 producten, geen lidmaatschap nodig.
 
 ## Productadvisor
 
@@ -34,6 +36,16 @@ samenvatting + top-3 producten met uitleg.
 
 - [Homepage](https://www.hlty.shop/)
 - [Alle producten](https://www.hlty.shop/alle-producten)
+- [Veelgestelde vragen](https://www.hlty.shop/veelgestelde-vragen)
+- [Creatine](https://www.hlty.shop/collectie/creatine)
+- [Vitamines](https://www.hlty.shop/collectie/vitamines-1)
+- [Mineralen](https://www.hlty.shop/collectie/mineralen-1)
+- [Omega-3 en vetzuren](https://www.hlty.shop/collectie/omega-3-visolie-1)
+- [Eiwitten en aminozuren](https://www.hlty.shop/collectie/eiwitten-aminozuren-1)
+- [Fysiotherapie en herstel](https://www.hlty.shop/collectie/fysiotherapie-herstel-1)
+- [Orthica](https://www.hlty.shop/merken/orthica)
+- [Vitakruid](https://www.hlty.shop/merken/vitakruid)
+- [Vitals](https://www.hlty.shop/merken/vitals)
 - [Sitemap (XML)](https://www.hlty.shop/sitemap.xml)
 - [Contact](https://www.hlty.shop/contact)
 - [Verzendbeleid](https://www.hlty.shop/beleid/verzending)

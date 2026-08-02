@@ -2,8 +2,10 @@
 
 **Datum onderzoek:** 29 juli 2026 (Claude Fable, volledige audit: code + live site
 + Google-index + Search Console)
-**Status:** 📋 Plan — wacht op beslispunten Stefan (§4), daarna per fase
-uitvoerbaar door een verse AI-sessie (startprompts in §11)
+**Status:** ✅ Beslispunten B1-B5 **beslist door Stefan op 2-8-2026** (§4).
+Uitvoering via aparte bouwsessies in de volgorde **A → B → SSR-migratie
+(nieuwe fase C) → D → E**; startprompts in §11. De oorspronkelijke fase C
+(bot-renderer) is vervallen ten gunste van de SSR-migratie.
 
 ---
 
@@ -38,8 +40,9 @@ Realistische verwachting: een nieuwe supplementenshop verslaat Bol, Holland
 zichtbaarheid), **(b) long-tail informatiecontent met de fysio-invalshoek
 als uniek verhaal** (het enige duurzame kanaal, ook voor AI-citaties),
 **(c) merk+product-zoekopdrachten** ("Vitals R-alfaliponzuur") waar de
-concurrentie dun is, en **(d) bot-leesbare pagina's** zodat AI-assistenten
-en social previews überhaupt iets te zien krijgen.
+concurrentie dun is, en **(d) server-gerenderde pagina's** zodat
+AI-assistenten en social previews überhaupt iets te zien krijgen (besloten:
+via de SSR-migratie, zie B5).
 
 ---
 
@@ -93,15 +96,17 @@ Bewaar deze cijfers; elke vervolgfase meet zich hieraan.
 
 ---
 
-## 4. Beslispunten voor Stefan (vooraf beslissen, daarna is alles uitvoerbaar)
+## 4. Beslispunten — ✅ BESLIST door Stefan, 2-8-2026
 
-| # | Vraag | Aanbeveling |
+Deze besluiten zijn definitief. Een bouwsessie heropent ze niet.
+
+| # | Vraag | Besluit |
 |---|---|---|
-| B1 | **Bot-rendering bouwen** (Fase C)? AI-bots en social-bots krijgen server-gerenderde HTML met alle productdata; gewone bezoekers en Googlebot merken niets. | **Ja.** Zonder dit blijft GEO onmogelijk en blijven gedeelde links (WhatsApp/socials) generiek. |
-| B2 | **Google Shopping: eigen feed op Vercel of de Shopify "Google & YouTube"-app?** De Shopify-app publiceert links op checkout.hlty.shop (zelfde probleem als bij Meta). | **Eigen feed** (`api/merchant-feed.ts`), links direct naar `www.hlty.shop/product/<handle>`. Zelfde patroon als de bestaande sitemap-functie. |
-| B3 | **Content-programma**: AI schrijft gidsen, wie reviewt op claims en toon? Tempo? | AI schrijft per gids een PR; **Stefan reviewt** (evt. Chris voor fysio-onderwerpen). Tempo: **2 gidsen/week eerste 6 weken** (= kalender §D3 af), daarna 1/week. |
-| B4 | **Reviews** (sterren + aggregateRating): nu systeem kiezen of parkeren? | **Parkeren** tot Fase A-D live zijn; dan Judge.me-headless vs eigen bouw afwegen (Fase E). |
-| B5 | **SSR-migratie** (React Router 7 framework mode) om alles server-rendered te maken? | **Nu niet.** Grote verbouwing van een werkende shop. Herevalueren wanneer organisch verkeer bewezen groeit (zie §10). Fase C dekt de bot-behoefte af. |
+| B1 | Bot-rendering bouwen? | **Vervallen.** Aanvankelijk "ja", maar door B5 (SSR nu) overbodig geworden — de SSR-migratie maakt álle pagina's leesbaar voor AI-bots en social previews. Er wordt géén aparte bot-renderer gebouwd. |
+| B2 | Google Shopping-feed: eigen feed of Shopify-app? | **Eigen feed** (`api/merchant-feed.ts`), links direct naar `www.hlty.shop/product/<handle>`. De Shopify-app is afgewezen (publiceert checkout-domeinlinks, leunt op het fragiele F6.1-script). |
+| B3 | Content-programma: tempo en review? | **2 gidsen/week de eerste 6 weken** (kalender §8.3 af), daarna 1/week. AI schrijft per gids een PR; **Stefan keurt elke gids**, **Chris (fysiotherapeut) kijkt mee bij fysio-onderwerpen** — dat maakt "gecheckt door een fysiotherapeut" waar en is goud voor GEO. |
+| B4 | Reviews nu of later? | **Parkeren met trigger:** zodra ~50 bestellingen binnen zijn, bouwen met (a) automatische review-uitnodiging na levering en (b) sterren pas tonen vanaf 3 reviews per product (nooit "0 reviews" in beeld). Tot die tijd geen bouwwerk. |
+| B5 | SSR-migratie nu of bij bewezen groei? | **Nu inplannen**, ná fase A en B. Stefans argument: de site is nu klein en rustig — het ideale moment voor een fundamentele verbouwing; elke maand wachten maakt de migratie groter. Voorwaarden: via de vaste werkwijze (plansessie → bouwsessie → controlesessie), op een branch met preview-deploy, cutover pas na complete e2e-gate (§7). |
 
 ---
 
@@ -167,44 +172,63 @@ van 10 `g:link`-URL's geeft 200 op de eigen storefront; MC-diagnosepagina
 
 ---
 
-## 7. Fase C — Bot-leesbare pagina's: GEO + social previews (2-3 dagen)
+## 7. Fase C — SSR-migratie naar React Router 7 framework mode (2-3 weken)
 
-**Doel:** AI-crawlers en social-share-bots krijgen volwaardige, semantische
-HTML met exact dezelfde informatie als de SPA toont. Googlebot en gewone
-bezoekers blijven de SPA krijgen — één waarheid, geen cloaking-risico.
+> Vervangt de oorspronkelijke fase C (bot-renderer) — besluit B5, 2-8-2026.
 
-1. **`api/bot-render.ts`**: serverless functie die op basis van het pad de
-   Storefront API bevraagt (hergebruik de fetch-helper uit `api/sitemap.ts`)
-   en kale, nette HTML rendert. Te dekken routes: `/`,
-   `/product/:handle` (h1, merk, prijs, voorraad, beschrijving, afbeeldingen
-   met alt, breadcrumb, volledige Product-JSON-LD), `/collectie/:handle` en
-   `/merken/:brand` (h1, beschrijving, productlijst met links, ItemList),
-   `/alle-producten`, `/veelgestelde-vragen` (alle 8 Q&A's voluit +
-   FAQPage-JSON-LD), `/beleid/:slug`, `/contact`. Elke pagina: correcte
-   `<title>`, meta-description, canonical naar www, en OG/Twitter-tags —
-   spiegel de logica van `src/components/SEO.tsx`.
-2. **Bot-detectie in `vercel.json`**: een rewrite mét `has`-conditie op de
-   `user-agent`-header (regex), geplaatst NÁ de bestaande redirects en de
-   sitemap-rewrite maar VÓÓR de SPA-catch-all. Botlijst (regex, case-
-   insensitive): `GPTBot|ChatGPT-User|OAI-SearchBot|ClaudeBot|Claude-User|
-   Claude-SearchBot|PerplexityBot|Perplexity-User|facebookexternalhit|
-   Facebot|Twitterbot|LinkedInBot|WhatsApp|Slackbot|TelegramBot|Discordbot|
-   Applebot|bingbot`. **Googlebot bewust NIET** — die rendert de echte SPA
-   (zie §3) en zo blijft de rankende bot op één waarheid zitten.
-3. **Inhoudsgelijkheid is de wet:** de bot-HTML mag niets beweren dat de SPA
-   niet toont. Zelfde titels, zelfde prijzen, zelfde beschrijvingen, zelfde
-   JSON-LD-payload. Bij twijfel: minder, nooit meer.
-4. **Cache**: `s-maxage=3600, stale-while-revalidate=86400` (zelfde beleid
-   als de sitemap); Storefront-API-fouten → val terug op de SPA-shell
-   (rewrite-fallback door 500 te vermijden: render dan een minimale pagina
-   met alleen title/canonical).
+**Doel:** de hele storefront server-side gerenderd op Vercel, zodat élke
+bezoeker — mens, Googlebot, AI-crawler, social-preview-bot — dezelfde
+volwaardige HTML krijgt. Dit dicht het GEO-gat fundamenteel, verbetert
+laadtijd/Core Web Vitals, en maakt alle toekomstige content (fase D) vanaf
+dag één bot-leesbaar.
 
-**Kwaliteitspoort:** `npm run build` groen. Curl-bewijs (in dit doc
-archiveren): `curl -A "GPTBot" https://www.hlty.shop/product/creatine-monohydrate-1000g-doypack`
-bevat h1 + prijs + beschrijving + JSON-LD; idem `-A "facebookexternalhit"`
-toont per-pagina OG-tags; `curl` met gewone browser-UA geeft de ongewijzigde
-SPA-shell. Post-deploy: link delen in WhatsApp/Slack toont een echte preview
-(screenshot), en de Meta Sharing Debugger toont de productdata.
+**Waarom React Router 7 framework mode:** `react-router-dom` v7 zit al in
+het project — routes en componenten zijn grotendeels herbruikbaar; het is de
+kleinste stap naar SSR (kleiner dan een Next.js-herschrijf) en draait
+first-class op Vercel.
+
+**Aanpak — via de vaste werkwijze, niet direct bouwen:**
+
+1. **Plansessie** (ontwerp-panel, zie
+   `/Users/stefanritsema/Documents/VibeCode/_WERKINSTRUCTIE-bouwsessie-opdracht.md`):
+   levert een bindende blauwdruk + opdrachtdocument. De blauwdruk moet
+   minimaal dekken: route-mapping (alle 13 routes + catch-all), loaders per
+   route (Storefront API server-side, met cache-strategie), wat er met
+   `vercel.json` gebeurt (redirects blijven; SPA-catch-all vervalt;
+   sitemap-rewrite blijft of verhuist), behoud van `api/*`-functies
+   (sitemap, webhook, auth, merchant-feed uit fase B), SEO/JSON-LD
+   server-side (vervangt `SEO.tsx`-hoisting), consent/tracking (GA4 + Pixel
+   blijven client-side ná consent — mag NIET server-side gaan lekken),
+   cart/checkout-flow (Storefront API cart + `checkoutUrl` naar
+   checkout.hlty.shop — exact behouden), auth-callback, en de
+   omgevingsvariabelen (VITE_-prefix verdwijnt voor server-code; secrets
+   scheiden).
+2. **Bouwsessie** op een aparte branch met Vercel preview-deploy; commit
+   per stap; nooit direct naar `main`.
+3. **Controlesessie + e2e-gate vóór cutover** — de cutover mag pas als
+   ALLES hieronder op de preview-URL bewezen is:
+   - [ ] Checkout: product → cart → `checkoutUrl` → Shopify-checkout werkt
+   - [ ] Login/account + auth-callback werkt
+   - [ ] Cookiebanner + consent: geen GA4/Pixel-request vóór toestemming,
+         wél erna (Network-tab-bewijs)
+   - [ ] Alle redirects uit `vercel.json` werken (steekproef /products/,
+         /collections/, /search, /policies/, apex→www)
+   - [ ] `curl` zonder JS toont per pagina: juiste title, meta-description,
+         canonical, OG-tags, JSON-LD én zichtbare content (h1, prijs,
+         beschrijving) — op product-, collectie-, merk-, FAQ- en homepagina
+   - [ ] Rich Results Test groen op product + FAQ
+   - [ ] Lighthouse ≥ de fase-A-baseline (geen regressie)
+   - [ ] `sitemap.xml`, `robots.txt`, `llms.txt` bereikbaar en correct
+   - [ ] Meta-advertentieketen: checkout.hlty.shop/products/… → 
+         www.hlty.shop/product/… blijft werken (F6.1 + redirects)
+4. **Cutover** = merge naar `main` + productie-deploy; **rollback** =
+   Vercel instant rollback naar de vorige deploy (vooraf verifiëren dat die
+   knop er staat). De Meta-advertenties kunnen tijdens de cutover kort
+   gepauzeerd worden als extra voorzichtigheid.
+
+**Kwaliteitspoort:** de volledige e2e-gate hierboven, afgevinkt met bewijs
+in het controlesessie-verslag; daarna de curl-bewijzen (GPTBot-UA én
+browser-UA identiek qua content) hier in het document archiveren.
 
 ---
 
@@ -222,8 +246,11 @@ iets te lezen valt.
    preview). Per gids: SEO-component, `Article`-JSON-LD (+ `FAQPage` voor de
    vraagsectie), breadcrumb, blok "bijpassende producten" (interne links
    naar 3-6 producten), publicatie-/wijzigingsdatum. Sitemap uitbreiden
-   (`api/sitemap.ts`) en `/gids` opnemen in llms.txt en de footer. **Als
-   Fase C al live is: de gids-routes toevoegen aan de bot-renderer.**
+   (`api/sitemap.ts`) en `/gids` opnemen in llms.txt en de footer.
+   **Timing:** de architectuurstap start ná de SSR-cutover (fase C), zodat
+   gidsen vanaf dag één server-gerenderd zijn. De cópy van gids 1 en 2 mag
+   al tijdens de SSR-bouw als concept geschreven worden (§8.3-4 zijn
+   framework-onafhankelijk); publicatie volgt na de cutover.
 2. **Redactiestatuut (hard, juridisch):** supplementen vallen onder
    EU-claimsverordening/KOAG-KAG. Alleen toegestane gezondheidsclaims
    ("magnesium draagt bij tot de vermindering van vermoeidheid") — nooit
@@ -268,9 +295,13 @@ valide (Rich Results Test na livegang van de eerste gids).
 
 ## 9. Fase E — Reviews & autoriteit (na A-D, apart te plannen)
 
-- **Reviews:** systeemkeuze (Judge.me met headless API vs eigen bouw op
-  Supabase) — beslispunt B4. Daarna `aggregateRating` toevoegen aan het
-  Product-schema (het enige ontbrekende rich-result-veld, zie Fase 8 §3).
+- **Reviews — trigger beslist (B4): starten zodra ~50 bestellingen binnen
+  zijn.** Dan: systeemkeuze (Judge.me met headless API vs eigen bouw op
+  Supabase), automatische review-uitnodiging na levering (aanhaken op de
+  bestaande `orders/paid`-webhook, `api/shopify-order-webhook.ts`), sterren
+  pas tonen vanaf 3 reviews per product (nooit "0 reviews" in beeld), en
+  `aggregateRating` in het Product-schema (het enige ontbrekende
+  rich-result-veld, zie Fase 8 §3).
 - **Autoriteit (doorlopend, deels handwerk Stefan):** bedrijfsvermeldingen
   (KvK-gerelateerde registers, supplementen-vergelijkers), een link vanaf
   fysiotherapiebilgaard.nl (relevant en legitiem: de fysio-curatie is het
@@ -298,11 +329,8 @@ hangt eraan).
 |---|---|---|---|---|
 | Nulmeting 29-7-2026 | 6 (3 mnd) | 439 (3 mnd) | 21 / 1.185 | Alleen merknaam-query's |
 
-**SSR-herevaluatie (beslispunt B5):** wanneer twee opeenvolgende maanden
-elk >500 organische klikken laten zien, of wanneer de shop structureel
-omzet uit organisch haalt, plan dan een aparte ontwerpsessie voor migratie
-naar React Router 7 framework mode (SSR op Vercel). Tot die tijd is Fase C
-de afdoende en veel goedkopere oplossing.
+**Reviews-trigger (B4):** noteer maandelijks ook het totaal aantal
+bestellingen; bij ~50 start fase E-reviews (zie §9).
 
 ---
 
@@ -325,17 +353,21 @@ curl verifiëren; alleen de bestanden van je eigen fase committen.
 > env-vars). Stap 1 (accountaanmaak) samen met Stefan. Werk §6 bij met
 > account-ID, feedstatus en afkeuringsredenen.
 
-> **Fase C:** Lees eerst dit document volledig, plus `api/sitemap.ts`,
-> `src/components/SEO.tsx` en `src/pages/Product.tsx` (de waarheid die je
-> spiegelt). Voer Fase C (§7) uit. Lever het curl-bewijs uit de
-> kwaliteitspoort letterlijk op in §7. Googlebot blijft uitgesloten van de
-> botlijst — dat is een besluit, niet een suggestie.
+> **Fase C (SSR) — start met de PLANSESSIE, niet met bouwen:** Lees eerst
+> dit document volledig (met name §7 en de besluiten in §4), plus
+> `/Users/stefanritsema/Documents/VibeCode/_WERKINSTRUCTIE-bouwsessie-opdracht.md`.
+> Je bent de plansessie: zet een ontwerp-panel op voor de migratie naar
+> React Router 7 framework mode volgens §7 stap 1, laat de resterende
+> beslispunten door Stefan beslissen, en schrijf daarna het bindende
+> opdrachtdocument voor de bouwsessie. De e2e-gate uit §7 stap 3 gaat
+> integraal in het opdrachtdocument; de besluiten in §4 heropen je niet.
 
-> **Fase D (architectuur):** Lees eerst dit document volledig plus
-> `src/data/brands.ts` en `src/pages/Brand.tsx` (patroon). Bouw §8 stap 1.
-> Daarna per gids een eigen sessie/PR: schrijf gids N uit de kalender in §8.3
-> volgens formaat §8.4 en het redactiestatuut §8.2 (claim-check verplicht in
-> de PR-beschrijving).
+> **Fase D (architectuur, ná de SSR-cutover):** Lees eerst dit document
+> volledig plus `src/data/brands.ts` en `src/pages/Brand.tsx` (patroon —
+> let op: paden kunnen na de SSR-migratie gewijzigd zijn; volg de nieuwe
+> structuur). Bouw §8 stap 1. Daarna per gids een eigen sessie/PR: schrijf
+> gids N uit de kalender in §8.3 volgens formaat §8.4 en het
+> redactiestatuut §8.2 (claim-check verplicht in de PR-beschrijving).
 
 ---
 
